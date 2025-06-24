@@ -15,8 +15,8 @@
 #define _TERM_QUERY_ENHANCEMENTS	CSI "?u"
 #define _TERM_QUERY_PRIMARY_ATTRS	CSI "c"
 
-#define _TERM_ENABLE_ENHANCEMENTS	CSI "11u"
-#define _TERM_ENABLE_ENHANCEMENTS_RAT	CSI "27u"
+#define _TERM_ENABLE_ENHANCEMENTS	CSI "=27u"
+#define _TERM_DISABLE_ENHANCEMENTS	CSI "=0u"
 
 extern u8	input_protocol;
 
@@ -62,5 +62,10 @@ _kbinput_init_read_response:
 }
 
 void	kbinput_cleanup(void) {
+	kbinput_listener_id	id;
+
+	for (id = 0; id < MAX_LISTENERS; id++)
+		kbinput_delete_listener(id);
+	write(1, _TERM_DISABLE_ENHANCEMENTS, sizeof(_TERM_DISABLE_ENHANCEMENTS));
 	tcsetattr(0, TCSANOW, &term_settings.old);
 }

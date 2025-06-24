@@ -22,8 +22,6 @@ typedef	uint16_t	u16;
 typedef	uint32_t	u32;
 typedef	uint64_t	u64;
 
-typedef i8	kbinput_listener_id;
-
 #define KB_MOD_SHIFT	0x01U
 #define KB_MOD_ALT		0x02U
 #define KB_MOD_CTRL		0x04U
@@ -42,15 +40,19 @@ typedef i8	kbinput_listener_id;
 
 #define KB_LISTENER_LIST_FULL	-2
 
+typedef i8	kbinput_listener_id;
+
+typedef void *	(*kbinput_fn)(void *);
+
 typedef struct __key {
+	kbinput_fn	fn;
 	struct {
 		union {
 			u32	unicode;
 			u32	special;
 		};
 		u8	type;
-	}		code;
-	u8		modifiers;
-	u8		event_type;
-	void	(*fn)(void *);
+	}	code;
+	u8	modifiers;
+	u8	event_type;
 }	kbinput_key;
