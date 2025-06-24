@@ -25,18 +25,18 @@ struct {
 	struct termios	new;
 }	term_settings;
 
-u8	kbinput_init(void) {
+[[gnu::constructor]] void	kbinput_init(void) {
 	ssize_t	bytes_read;
 	size_t	i;
 	char	buf[128];
 
 	if (tcgetattr(0, &term_settings.old) == -1)
-		return 0;
+		return ;
 	term_settings.new = term_settings.old;
 	term_settings.new.c_iflag &= ~(ICRNL | IXON);
 	term_settings.new.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 	if (tcsetattr(0, TCSANOW, &term_settings.new) == -1)
-		return 0;
+		return ;
 	write(1, _TERM_QUERY_ENHANCEMENTS, sizeof(_TERM_QUERY_ENHANCEMENTS));
 	write(1, _TERM_QUERY_PRIMARY_ATTRS, sizeof(_TERM_QUERY_PRIMARY_ATTRS));
 _kbinput_init_read_response:
@@ -56,12 +56,12 @@ _kbinput_init_read_response:
 			break ;
 		default:
 			input_protocol = INPUT_PROTOCOL_ERROR;
-			return 0;
+			return ;
 	}
-	return 1;
+	return ;
 }
 
-void	kbinput_cleanup(void) {
+[[gnu::destructor]] void	kbinput_cleanup(void) {
 	kbinput_listener_id	id;
 
 	for (id = 0; id < MAX_LISTENERS; id++)

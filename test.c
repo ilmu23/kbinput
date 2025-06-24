@@ -37,7 +37,6 @@ i32	main(void) {
 	kbinput_listener_id	listener;
 	kbinput_fn			fn;
 
-	kbinput_init();
 	listener = kbinput_new_listener();
 	if (listener < 0)
 		return 1;
@@ -67,6 +66,5 @@ i32	main(void) {
 	fn = kbinput_listen(listener);
 	if (fn)
 		fn(NULL);
-	kbinput_cleanup();
 	return 0;
 }
