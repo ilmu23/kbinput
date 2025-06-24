@@ -26,7 +26,11 @@ SRCDIR	=	src
 OBJDIR	=	obj
 INCDIR	=	inc
 
-FILES	=	
+UTILDIR	=	utils
+
+FILES	=	init.c \
+			listener.c \
+			$(UTILDIR)/vector.c
 
 SRCS	=	$(addprefix $(SRCDIR)/, $(FILES))
 OBJS	=	$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
@@ -44,8 +48,8 @@ $(TEST_CLIENT): $(SRCDIR)/test_client.c $(SRCDIR)/utils.c
 	@printf "\e[38;5;119;1mKBINPUT >\e[m \e[1mDone!\e[m\n"
 
 $(OBJDIR):
-	@printf "\e[38;5;119;1mKBINPUT >\e[m Creating objdir\n"
-	@mkdir -p $(OBJDIR)
+	@printf "\e[38;5;119;1mKBINPUT >\e[m Creating objdirs\n"
+	@mkdir -p $(OBJDIR)/$(UTILDIR)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@printf "\e[38;5;119;1mKBINPUT >\e[m Compiling %s\n" $<

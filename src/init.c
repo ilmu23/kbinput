@@ -41,10 +41,10 @@ u8	kbinput_init(void) {
 	write(1, _TERM_QUERY_PRIMARY_ATTRS, sizeof(_TERM_QUERY_PRIMARY_ATTRS));
 _kbinput_init_read_response:
 	bytes_read = read(0, buf, sizeof(buf));
-	for (i = 0; i < bytes_read && buf[i]; i++)
+	for (i = 0; i < (size_t)bytes_read && buf[i]; i++)
 		if (buf[i] == 'u' || buf[i] == 'c')
 			break ;
-	if (i == bytes_read)
+	if (i == (size_t)bytes_read)
 		goto _kbinput_init_read_response;
 	switch (buf[i]) {
 		case 'u':
@@ -61,6 +61,6 @@ _kbinput_init_read_response:
 	return 1;
 }
 
-u8	kbinput_cleanup(void) {
-	return 1;
+void	kbinput_cleanup(void) {
+	tcsetattr(0, TCSANOW, &term_settings.old);
 }

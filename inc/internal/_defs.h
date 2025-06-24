@@ -11,6 +11,8 @@
 
 #define CSI	"\x1b["
 
+#define MAX_LISTENERS	10
+
 #define INPUT_PROTOCOL_KITTY	1
 #define INPUT_PROTOCOL_LEGACY	2
 #define INPUT_PROTOCOL_ERROR	0

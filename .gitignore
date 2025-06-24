@@ -1,6 +1,7 @@
 *.a
 *.o
 bin
+*.so
 *.log
 *.out*
 *.txt
