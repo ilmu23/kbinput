@@ -10,6 +10,7 @@
 #pragma once
 
 #include "defs.h"
+#include "keys.h"
 
 kbinput_listener_id	kbinput_new_listener(void);
 
