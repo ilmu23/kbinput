@@ -224,17 +224,13 @@ static inline key_group	*_new_group(const u32 code) {
 
 static inline size_t	_find_group(const vector vec, const kbinput_key *key) {
 	key_group	*group;
-	size_t		search_width;
+	size_t		size;
 	size_t		i;
 
-	i = vector_size(vec) / 2;
-	search_width = i;
-	for (group = get_group(vec, i); in_bounds(group) && search_width && key->code.unicode != group->code; group = get_group(vec, i)) {
-		search_width /= 2;
-		if (key->code.unicode < group->code)
-			i -= search_width + 1;
-		else
-			i += search_width + 1;
+	for (i = 0, size = vector_size(vec); i < size; i++) {
+		group = get_group(vec, i);
+		if (group->code >= key->code.unicode)
+			break ;
 	}
 	return i;
 }
@@ -306,7 +302,7 @@ static inline u8	_insert_key(vector vec, const kbinput_key *key) {
 	group = get_group(vec, i);
 	if (!in_bounds(group) || group->code != key->code.unicode) {
 		group = _new_group(key->code.unicode);
-		if (!group || !vector_insert(vec, i + 1, group))
+		if (!group || !vector_insert(vec, i, group))
 			return 0;
 		_key = _new_key(key);
 		return (_key) ? vector_push(group->keys, _key) : 0;
