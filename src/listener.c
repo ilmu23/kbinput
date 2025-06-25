@@ -19,7 +19,7 @@ typedef struct __key_group {
 	u32		code;
 }	key_group;
 
-#define _BUFFER_SIZE	32
+#define _BUFFER_SIZE	64
 
 #define get_group(v, i)	((key_group *)vector_get(v, i))
 #define get_key(v, i)	((kbinput_key *)vector_get(v, i))
@@ -27,8 +27,8 @@ typedef struct __key_group {
 
 #define check_mods(x, y)	((y & KB_MOD_IGN_LCK) ? (x & ~(KB_MOD_CAPS_LCK | KB_MOD_NUM_LCK)) == (y & ~KB_MOD_IGN_LCK) : x == y)
 
-static inline kbinput_key	*_listen_kitty(kbinput_listener_id listener);
-static inline kbinput_key	*_listen_legacy(kbinput_listener_id listener);
+static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id);
+static inline kbinput_key	*_listen_legacy(const kbinput_listener_id id);
 static inline kbinput_key	*_find_key(const vector vec, const kbinput_key *key);
 static inline kbinput_key	*_new_key(const kbinput_key *key);
 static inline key_group		*_new_group(const u32 code);
@@ -42,12 +42,11 @@ static inline u8			_insert_key(vector vec, const kbinput_key *key);
 
 static void	_free_key_group(void *group);
 
-static char	buf[_BUFFER_SIZE + 1];
-
 static struct {
 	const kbinput_listener_id	id;
 	vector						uc_keys;
 	vector						sp_keys;
+	char						buf[_BUFFER_SIZE + 1];
 	u8							in_use;
 }	listeners[MAX_LISTENERS] = {
 	{.id = 0, .uc_keys = NULL, .sp_keys = NULL, .in_use = 0},
@@ -83,15 +82,15 @@ kbinput_listener_id	kbinput_new_listener(void) {
 	return listeners[i].id;
 }
 
-const kbinput_key	*kbinput_listen(const kbinput_listener_id listener) {
+const kbinput_key	*kbinput_listen(const kbinput_listener_id id) {
 	const kbinput_key	*key;
 
 	switch (input_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			key = _listen_kitty(listener);
+			key = _listen_kitty(id);
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
-			key = _listen_legacy(listener);
+			key = _listen_legacy(id);
 			break ;
 		default:
 			key = NULL;
@@ -99,20 +98,20 @@ const kbinput_key	*kbinput_listen(const kbinput_listener_id listener) {
 	return key;
 }
 
-void	kbinput_delete_listener(const kbinput_listener_id listener) {
-	if (listener >= 0 && listener < MAX_LISTENERS && listeners[listener].in_use) {
-		vector_delete(listeners[listener].uc_keys);
-		vector_delete(listeners[listener].sp_keys);
-		listeners[listener].in_use = 0;
+void	kbinput_delete_listener(const kbinput_listener_id id) {
+	if (id >= 0 && id < MAX_LISTENERS && listeners[id].in_use) {
+		vector_delete(listeners[id].uc_keys);
+		vector_delete(listeners[id].sp_keys);
+		listeners[id].in_use = 0;
 	}
 }
 
-u8	kbinput_add_listener(const kbinput_listener_id listener, const kbinput_key key) {
+u8	kbinput_add_listener(const kbinput_listener_id id, const kbinput_key key) {
 	vector	vec;
 
-	if (listener < 0 || listener >= MAX_LISTENERS)
+	if (id < 0 || id >= MAX_LISTENERS)
 		return 0;
-	vec = (key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[listener].uc_keys : listeners[listener].sp_keys;
+	vec = (key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[id].uc_keys : listeners[id].sp_keys;
 	return (_insert_key(vec, &key));
 }
 
@@ -120,47 +119,53 @@ u8	kbinput_get_input_protocol(void) {
 	return input_protocol;
 }
 
-[[maybe_unused]] static inline void	_print_seq(void) {
+[[maybe_unused]] static inline void	_print_buf(const kbinput_listener_id id) {
 	size_t	i;
 
-	for (i = 0; buf[i]; i++) {
-		if (buf[i] == '\x1b')
+	for (i = 0; listeners[id].buf[i]; i++) {
+		if (listeners[id].buf[i] == '\x1b')
 			fprintf(stderr, "\\x1b");
 		else
-			fputc(buf[i], stderr);
+			fputc(listeners[id].buf[i], stderr);
 	}
 	fputc('\n', stderr);
 }
 
-static inline kbinput_key	*_listen_kitty(kbinput_listener_id listener) {
+static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 	kbinput_key	key;
 	kbinput_key	*out;
 	ssize_t		rv;
 	size_t		seq_len;
+	size_t		buf_len;
 	size_t		j;
 	size_t		i;
 	char		*params[2];
 
 	out = NULL;
 	while (!out) {
-		rv = read(0, buf, _BUFFER_SIZE);
-		if (rv == -1)
-			return NULL;
-		seq_len = _seqlen(buf);
+		if (!*listeners[id].buf) {
+			rv = read(0, listeners[id].buf, _BUFFER_SIZE);
+			if (rv == -1)
+				return NULL;
 #ifdef __DEBUG_ECHO_SEQS
-		_print_seq();
+			_print_buf();
 #endif /* __DEBUG_ECHO_SEQS */
-		for (i = j = sizeof(CSI) - 1; buf[j] && buf[j] != ';'; j++)
+		}
+		seq_len = _seqlen(listeners[id].buf);
+		for (i = j = sizeof(CSI) - 1; listeners[id].buf[j] && listeners[id].buf[j] != ';'; j++)
 			;
-		params[0] = _substr(buf, i, j - i);
-		for (i = ++j; buf[j] && buf[j] != ';'; j++)
+		params[0] = _substr(listeners[id].buf, i, j - i);
+		for (i = ++j; listeners[id].buf[j] && listeners[id].buf[j] != ';'; j++)
 			;
-		params[1] = _substr(buf, i, j - i);
-		key.code.type = (buf[seq_len - 1] == 'u') ? KB_KEY_TYPE_UNICODE : KB_KEY_TYPE_SPECIAL;
+		params[1] = _substr(listeners[id].buf, i, j - i);
+		key.code.type = (listeners[id].buf[seq_len - 1] == 'u') ? KB_KEY_TYPE_UNICODE : KB_KEY_TYPE_SPECIAL;
 		_parse_key_code(params[0], &key);
 		_parse_modifiers(params[1], &key);
-		out = _find_key((key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[listener].uc_keys : listeners[listener].sp_keys, &key);
-		memset(buf, 0, _BUFFER_SIZE);
+		out = _find_key((key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[id].uc_keys : listeners[id].sp_keys, &key);
+		buf_len = strlen(listeners[id].buf);
+		memmove(listeners[id].buf, &listeners[id].buf[seq_len], buf_len - seq_len);
+		for (i = 0; i < seq_len; i++)
+			listeners[id].buf[buf_len - seq_len + i] = '\0';
 		memset(&key, 0, sizeof(key));
 		free(params[1]);
 		free(params[0]);
@@ -168,8 +173,8 @@ static inline kbinput_key	*_listen_kitty(kbinput_listener_id listener) {
 	return out;
 }
 
-static inline kbinput_key	*_listen_legacy(kbinput_listener_id listener) {
-	return (void *)(uintptr_t)listener;
+static inline kbinput_key	*_listen_legacy(const kbinput_listener_id id) {
+	return (void *)(uintptr_t)id;
 }
 
 static inline kbinput_key	*_find_key(const vector vec, const kbinput_key *key) {
