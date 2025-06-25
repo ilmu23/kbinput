@@ -34,7 +34,6 @@ static inline size_t		_find_group(const vector vec, const kbinput_key *key);
 static inline size_t		_seqlen(const char *s);
 static inline char			*_substr(const char *s, const size_t start, const size_t len);
 static inline void			_parse_modifiers(const char *param, kbinput_key *key);
-static inline void			_parse_key_type(const char *param, kbinput_key *key);
 static inline void			_parse_key_code(const char *param, kbinput_key *key);
 static inline u8			_insert_key(vector vec, const kbinput_key *key);
 
@@ -85,11 +84,14 @@ kbinput_fn	kbinput_listen(const kbinput_listener_id listener) {
 	const kbinput_key	*key;
 
 	switch (input_protocol) {
-		case INPUT_PROTOCOL_KITTY:
+		case KB_INPUT_PROTOCOL_KITTY:
 			key = _listen_kitty(listener);
 			break ;
-		case INPUT_PROTOCOL_LEGACY:
+		case KB_INPUT_PROTOCOL_LEGACY:
 			key = _listen_legacy(listener);
+			break ;
+		default:
+			key = NULL;
 	}
 	return (key) ? key->fn : NULL;
 }
@@ -111,7 +113,11 @@ u8	kbinput_add_listener(const kbinput_listener_id listener, const kbinput_key ke
 	return (_insert_key(vec, &key));
 }
 
-static inline void	_print_seq(void) {
+u8	kbinput_get_input_protocol(void) {
+	return input_protocol;
+}
+
+[[maybe_unused]] static inline void	_print_seq(void) {
 	size_t	i;
 
 	for (i = 0; buf[i]; i++) {
@@ -127,7 +133,7 @@ static inline kbinput_key	*_listen_kitty(kbinput_listener_id listener) {
 	kbinput_key	key;
 	kbinput_key	*out;
 	ssize_t		rv;
-	[[gnu::unused]] size_t		seq_len;
+	size_t		seq_len;
 	size_t		j;
 	size_t		i;
 	char		*params[2];
@@ -138,14 +144,16 @@ static inline kbinput_key	*_listen_kitty(kbinput_listener_id listener) {
 		if (rv == -1)
 			return NULL;
 		seq_len = _seqlen(buf);
+#ifdef __DEBUG_ECHO_SEQS
 		_print_seq();
+#endif /* __DEBUG_ECHO_SEQS */
 		for (i = j = sizeof(CSI) - 1; buf[j] && buf[j] != ';'; j++)
 			;
 		params[0] = _substr(buf, i, j - i);
 		for (i = ++j; buf[j] && buf[j] != ';'; j++)
 			;
 		params[1] = _substr(buf, i, j - i);
-		_parse_key_type(params[0], &key);
+		key.code.type = (buf[seq_len - 1] == 'u') ? KB_KEY_TYPE_UNICODE : KB_KEY_TYPE_SPECIAL;
 		_parse_key_code(params[0], &key);
 		_parse_modifiers(params[1], &key);
 		out = _find_key((key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[listener].uc_keys : listeners[listener].sp_keys, &key);
@@ -220,9 +228,9 @@ static inline size_t	_find_group(const vector vec, const kbinput_key *key) {
 	for (group = get_group(vec, i); search_width && key->code.unicode != group->code; group = get_group(vec, i)) {
 		search_width /= 2;
 		if (key->code.unicode < group->code)
-			i -= search_width;
+			i -= search_width + 1;
 		else
-			i += search_width;
+			i += search_width + 1;
 	}
 	return i;
 }
@@ -230,7 +238,7 @@ static inline size_t	_find_group(const vector vec, const kbinput_key *key) {
 static inline size_t	_seqlen(const char *s) {
 	size_t	i;
 
-	for (i = sizeof(CSI) - 1; s[i] && strchr("0123456789:;", s[i]); i++)
+	for (i = sizeof(CSI) - 1; s[i] && s[i] != '\x1b'; i++)
 		;
 	return i;
 }
@@ -264,17 +272,15 @@ static inline void	_parse_modifiers(const char *param, kbinput_key *key) {
 		case 3:
 			key->event_type = KB_EVENT_RELEASE;
 	}
-	fprintf(stderr, "_parse_modifiers(%s): mods: %hhu; canon_event: %hhu\n", param, key->modifiers, canon_event);
-}
-
-static inline void	_parse_key_type(const char *param, kbinput_key *key) {
-	key->code.type = (param[0] == '1' && (param[1] == '\0' || param[1] == ';')) ? KB_KEY_TYPE_SPECIAL : KB_KEY_TYPE_UNICODE;
-	fprintf(stderr, "_parse_key_type(%s): type: %s\n", param, key->code.type == KB_KEY_TYPE_UNICODE ? "UC" : "SP");
 }
 
 static inline void	_parse_key_code(const char *param, kbinput_key *key) {
-	key->code.unicode = strtoul(param, NULL, 10);
-	fprintf(stderr, "_parse_key_code(%s): keycode: %u\n", param, key->code.unicode);
+	size_t	i;
+
+	if (key->code.type == KB_KEY_TYPE_UNICODE)
+		key->code.unicode = strtoul(param, NULL, 10);
+	else for (i = 0; param[i]; i++)
+		key->code.special |= param[i] << (i * 8);
 }
 
 static inline u8	_insert_key(vector vec, const kbinput_key *key) {
@@ -287,7 +293,7 @@ static inline u8	_insert_key(vector vec, const kbinput_key *key) {
 	group = get_group(vec, i);
 	if (!in_bounds(group) || group->code != key->code.unicode) {
 		group = _new_group(key->code.unicode);
-		if (!group || !vector_insert(vec, i, group))
+		if (!group || !vector_insert(vec, i + 1, group))
 			return 0;
 		_key = _new_key(key);
 		return (_key) ? vector_push(group->keys, _key) : 0;

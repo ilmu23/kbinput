@@ -48,14 +48,14 @@ _kbinput_init_read_response:
 		goto _kbinput_init_read_response;
 	switch (buf[i]) {
 		case 'u':
-			input_protocol = INPUT_PROTOCOL_KITTY;
+			input_protocol = KB_INPUT_PROTOCOL_KITTY;
 			write(1, _TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_ENABLE_ENHANCEMENTS));
 			break ;
 		case 'c':
-			input_protocol = INPUT_PROTOCOL_LEGACY;
+			input_protocol = KB_INPUT_PROTOCOL_LEGACY;
 			break ;
 		default:
-			input_protocol = INPUT_PROTOCOL_ERROR;
+			input_protocol = KB_INPUT_PROTOCOL_ERROR;
 			return ;
 	}
 	return ;

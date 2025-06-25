@@ -40,6 +40,10 @@ typedef	uint64_t	u64;
 
 #define KB_LISTENER_LIST_FULL	-2
 
+#define KB_INPUT_PROTOCOL_ERROR		0
+#define KB_INPUT_PROTOCOL_KITTY		1
+#define KB_INPUT_PROTOCOL_LEGACY	2
+
 typedef i8	kbinput_listener_id;
 
 typedef void *	(*kbinput_fn)(void *);

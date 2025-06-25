@@ -13,7 +13,7 @@ BUILD	=	fsan
 
 CC				=	gcc
 cflags.common	=	-Wall -Wextra -Werror -Wpedantic -pedantic-errors -std=gnu2x -fpic -I$(INCDIR)
-cflags.debug	=	-g
+cflags.debug	=	-g -D__DEBUG_ECHO_SEQS
 cflags.fsan		=	$(cflags.debug) -fsanitize=address,undefined
 cflags.normal	=	-s -O1
 cflags.extra	=	
