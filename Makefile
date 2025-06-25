@@ -42,11 +42,6 @@ $(NAME): $(OBJDIR) $(OBJS)
 	@$(LD) $(LDFLAGS) $(OBJS) -o $@
 	@printf "\e[38;5;119;1mKBINPUT >\e[m \e[1mDone!\e[m\n"
 
-$(TEST_CLIENT): $(SRCDIR)/test_client.c $(SRCDIR)/utils.c
-	@printf "\e[38;5;119;1mKBINPUT >\e[m Compiling %s\n" $@
-	@$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
-	@printf "\e[38;5;119;1mKBINPUT >\e[m \e[1mDone!\e[m\n"
-
 $(OBJDIR):
 	@printf "\e[38;5;119;1mKBINPUT >\e[m Creating objdirs\n"
 	@mkdir -p $(OBJDIR)/$(UTILDIR)
