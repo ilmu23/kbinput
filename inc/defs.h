@@ -30,6 +30,7 @@ typedef	uint64_t	u64;
 #define KB_MOD_META		0x20U
 #define KB_MOD_CAPS_LCK	0x40U
 #define KB_MOD_NUM_LCK	0x80U
+#define KB_MOD_IGN_LCK	0x100U
 
 #define KB_EVENT_PRESS		0x1U // canon value: 1
 #define KB_EVENT_REPEAT		0x2U // canon value: 2
@@ -57,6 +58,6 @@ typedef struct __key {
 		};
 		u8	type;
 	}	code;
-	u8	modifiers;
+	u16	modifiers;
 	u8	event_type;
 }	kbinput_key;

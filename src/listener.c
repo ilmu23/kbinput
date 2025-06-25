@@ -25,12 +25,15 @@ typedef struct __key_group {
 #define get_key(v, i)	((kbinput_key *)vector_get(v, i))
 #define in_bounds(p)	(p != (void *)VECTOR_INDEX_OUT_OF_BOUNDS)
 
+#define check_mods(x, y)	((y & KB_MOD_IGN_LCK) ? (x & ~(KB_MOD_CAPS_LCK | KB_MOD_NUM_LCK)) == (y & ~KB_MOD_IGN_LCK) : x == y)
+
 static inline kbinput_key	*_listen_kitty(kbinput_listener_id listener);
 static inline kbinput_key	*_listen_legacy(kbinput_listener_id listener);
 static inline kbinput_key	*_find_key(const vector vec, const kbinput_key *key);
 static inline kbinput_key	*_new_key(const kbinput_key *key);
 static inline key_group		*_new_group(const u32 code);
 static inline size_t		_find_group(const vector vec, const kbinput_key *key);
+static inline size_t		_strlcpy(char * dst, const char *src, const size_t n);
 static inline size_t		_seqlen(const char *s);
 static inline char			*_substr(const char *s, const size_t start, const size_t len);
 static inline void			_parse_modifiers(const char *param, kbinput_key *key);
@@ -80,7 +83,7 @@ kbinput_listener_id	kbinput_new_listener(void) {
 	return listeners[i].id;
 }
 
-kbinput_fn	kbinput_listen(const kbinput_listener_id listener) {
+const kbinput_key	*kbinput_listen(const kbinput_listener_id listener) {
 	const kbinput_key	*key;
 
 	switch (input_protocol) {
@@ -93,7 +96,7 @@ kbinput_fn	kbinput_listen(const kbinput_listener_id listener) {
 		default:
 			key = NULL;
 	}
-	return (key) ? key->fn : NULL;
+	return key;
 }
 
 void	kbinput_delete_listener(const kbinput_listener_id listener) {
@@ -158,6 +161,7 @@ static inline kbinput_key	*_listen_kitty(kbinput_listener_id listener) {
 		_parse_modifiers(params[1], &key);
 		out = _find_key((key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[listener].uc_keys : listeners[listener].sp_keys, &key);
 		memset(buf, 0, _BUFFER_SIZE);
+		memset(&key, 0, sizeof(key));
 		free(params[1]);
 		free(params[0]);
 	}
@@ -179,7 +183,7 @@ static inline kbinput_key	*_find_key(const vector vec, const kbinput_key *key) {
 		return NULL;
 	for (i = 0, size = vector_size(group->keys); i < size; i++) {
 		out = get_key(group->keys, i);
-		if (key->modifiers == out->modifiers && key->event_type == out->event_type)
+		if (check_mods(key->modifiers, out->modifiers) && key->event_type == out->event_type)
 			break ;
 	}
 	return (i < size) ? out : NULL;
@@ -225,7 +229,7 @@ static inline size_t	_find_group(const vector vec, const kbinput_key *key) {
 
 	i = vector_size(vec) / 2;
 	search_width = i;
-	for (group = get_group(vec, i); search_width && key->code.unicode != group->code; group = get_group(vec, i)) {
+	for (group = get_group(vec, i); in_bounds(group) && search_width && key->code.unicode != group->code; group = get_group(vec, i)) {
 		search_width /= 2;
 		if (key->code.unicode < group->code)
 			i -= search_width + 1;
@@ -233,6 +237,15 @@ static inline size_t	_find_group(const vector vec, const kbinput_key *key) {
 			i += search_width + 1;
 	}
 	return i;
+}
+
+static inline size_t	_strlcpy(char * dst, const char *src, const size_t n) {
+	size_t	len;
+
+	len = strnlen(src, n - 1);
+	memcpy(dst, src, len);
+	dst[len] = '\0';
+	return strlen(src);
 }
 
 static inline size_t	_seqlen(const char *s) {
@@ -250,7 +263,7 @@ static inline char	*_substr(const char *s, const size_t start, const size_t len)
 	_len = strnlen(&s[start], len) + 1;
 	out = malloc(_len * sizeof(*out));
 	if (out)
-		strlcpy(out, &s[start], _len);
+		_strlcpy(out, &s[start], _len);
 	return out;
 }
 
@@ -298,10 +311,11 @@ static inline u8	_insert_key(vector vec, const kbinput_key *key) {
 		_key = _new_key(key);
 		return (_key) ? vector_push(group->keys, _key) : 0;
 	}
-	for (i = match = 0, _key = get_key(group->keys, i); !match && in_bounds(_key); _key = get_key(group->keys, ++i)) {
-		if (key->modifiers == _key->modifiers && key->event_type == _key->event_type)
+	for (i = match = 0, _key = get_key(group->keys, i); in_bounds(_key); _key = get_key(group->keys, ++i)) {
+		if (key->modifiers == _key->modifiers && key->event_type == _key->event_type) {
 			match = 1;
-		else if (key->modifiers > _key->modifiers)
+			break ;
+		} else if (key->modifiers > _key->modifiers)
 			break ;
 	}
 	if (!match) {
@@ -313,6 +327,8 @@ static inline u8	_insert_key(vector vec, const kbinput_key *key) {
 }
 
 static void	_free_key_group(void *group) {
-	if (group)
+	if (group) {
 		vector_delete(((key_group *)group)->keys);
+		free(group);
+	}
 }
