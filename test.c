@@ -8,27 +8,59 @@
 // <<test.c>>
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "kbinput.h"
 
-void	*press_a([[gnu::unused]] void *arg) {
-	printf("event: a pressed\n");
+void	*press(void *arg) {
+	const kbinput_key	*key;
+	u8					mod;
+
+	key = arg;
+	fprintf(stdout, "event: ");
+	for (mod = KB_MOD_SHIFT; mod < KB_MOD_HYPER; mod *= 2) {
+		switch (key->modifiers & mod) {
+			case KB_MOD_SHIFT:
+				fprintf(stdout, "SHIFT + ");
+				break ;
+			case KB_MOD_ALT:
+				fprintf(stdout, "ALT + ");
+				break ;
+			case KB_MOD_CTRL:
+				fprintf(stdout, "CTRL + ");
+				break ;
+			case KB_MOD_SUPER:
+				fprintf(stdout, "SUPER + ");
+		}
+	}
+	fprintf(stdout, "%c pressed\n", key->code.unicode - 0x20);
 	return NULL;
 }
 
-void	*release_a([[gnu::unused]] void *arg) {
-	printf("event: a released\n");
-	return NULL;
-}
+void	*release(void *arg) {
+	const kbinput_key	*key;
+	u8					mod;
 
-void	*press_shift_a([[gnu::unused]] void *arg) {
-	printf("event: A pressed\n");
-	return NULL;
-}
-
-void	*release_shift_a([[gnu::unused]] void *arg) {
-	printf("event: A released\n");
+	key = arg;
+	fprintf(stdout, "event: ");
+	for (mod = KB_MOD_SHIFT; mod < KB_MOD_HYPER; mod *= 2) {
+		switch (key->modifiers & mod) {
+			case KB_MOD_SHIFT:
+				fprintf(stdout, "SHIFT + ");
+				break ;
+			case KB_MOD_ALT:
+				fprintf(stdout, "ALT + ");
+				break ;
+			case KB_MOD_CTRL:
+				fprintf(stdout, "CTRL + ");
+				break ;
+			case KB_MOD_SUPER:
+				fprintf(stdout, "SUPER + ");
+		}
+	}
+	fprintf(stdout, "%c released\n", key->code.unicode - 0x20);
 	return NULL;
 }
 
@@ -36,42 +68,66 @@ void	*quit([[gnu::unused]] void *arg) {
 	exit(0);
 }
 
-#define key(t, c, m, e, f)	((kbinput_key){.code.type = t, .code.unicode = c, .modifiers = m, .event_type = e, .fn = f})
+#define key(t, c, m, e, f)	((kbinput_key){.code.type = t, .code.unicode = c, .modifiers = KB_MOD_IGN_LCK | m, .event_type = e, .fn = f})
+
+#define EVENT_COUNT	2
+#define MOD_COUNT	15
+
+static const struct {
+	kbinput_fn	fn;
+	u8			et;
+}	events[EVENT_COUNT] = {
+	{.fn = press, .et = KB_EVENT_PRESS},
+	{.fn = release, .et = KB_EVENT_RELEASE}
+};
+
+static u16	mods[MOD_COUNT] = {
+	0,
+	KB_MOD_SHIFT,
+	KB_MOD_ALT,
+	KB_MOD_CTRL,
+	KB_MOD_SUPER,
+	KB_MOD_SHIFT | KB_MOD_ALT,
+	KB_MOD_SHIFT | KB_MOD_CTRL,
+	KB_MOD_SHIFT | KB_MOD_SUPER,
+	KB_MOD_ALT | KB_MOD_CTRL,
+	KB_MOD_ALT | KB_MOD_SUPER,
+	KB_MOD_CTRL | KB_MOD_SUPER,
+	KB_MOD_SHIFT | KB_MOD_ALT | KB_MOD_CTRL,
+	KB_MOD_SHIFT | KB_MOD_ALT | KB_MOD_SUPER,
+	KB_MOD_ALT | KB_MOD_CTRL | KB_MOD_SUPER,
+	KB_MOD_SHIFT | KB_MOD_ALT | KB_MOD_CTRL | KB_MOD_SUPER
+};
+
+static inline void	_init_listeners(const kbinput_listener_id id) {
+	size_t	i;
+	size_t	j;
+	char	c;
+
+	write(1, "\x1b[=0u", 5);
+	for (c = 'a'; c <= 'z'; c++) {
+		for (i = 0; i < EVENT_COUNT; i++) {
+			for (j = 0; j < MOD_COUNT; j++) {
+				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) != 0);
+			}
+		}
+	}
+	assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, 'c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)) != 0);
+	write(1, "\x1b[=27u", 6);
+}
 
 i32	main(void) {
 	kbinput_listener_id	listener;
-	kbinput_fn			fn;
+	const kbinput_key	*key;
 
 	listener = kbinput_new_listener();
 	if (listener < 0)
 		return 1;
-	if (!kbinput_add_listener(listener, key(KB_KEY_TYPE_UNICODE, 'a', 0, KB_EVENT_PRESS, press_a)))
-		return 1;
-	if (!kbinput_add_listener(listener, key(KB_KEY_TYPE_UNICODE, 'a', 0, KB_EVENT_RELEASE, release_a)))
-		return 1;
-	if (!kbinput_add_listener(listener, key(KB_KEY_TYPE_UNICODE, 'a', KB_MOD_SHIFT, KB_EVENT_PRESS, press_shift_a)))
-		return 1;
-	if (!kbinput_add_listener(listener, key(KB_KEY_TYPE_UNICODE, 'a', KB_MOD_SHIFT, KB_EVENT_RELEASE, release_shift_a)))
-		return 1;
-	if (!kbinput_add_listener(listener, key(KB_KEY_TYPE_UNICODE, 'c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)))
-		return 1;
-	fn = kbinput_listen(listener);
-	if (fn)
-		fn(NULL);
-	fn = kbinput_listen(listener);
-	if (fn)
-		fn(NULL);
-	fn = kbinput_listen(listener);
-	if (fn)
-		fn(NULL);
-	fn = kbinput_listen(listener);
-	if (fn)
-		fn(NULL);
-	fn = kbinput_listen(listener);
-	if (fn)
-		fn(NULL);
-	fn = kbinput_listen(listener);
-	if (fn)
-		fn(NULL);
-	return 0;
+	_init_listeners(listener);
+	while (1) {
+		key = kbinput_listen(listener);
+		if (!key)
+			return 1;
+		key->fn((void *)key);
+	}
 }
