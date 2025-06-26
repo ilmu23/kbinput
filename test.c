@@ -108,11 +108,11 @@ static inline void	_init_listeners(const kbinput_listener_id id) {
 	for (c = 'a'; c <= 'z'; c++) {
 		for (i = 0; i < EVENT_COUNT; i++) {
 			for (j = 0; j < MOD_COUNT; j++) {
-				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) != 0);
+				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) > 0);
 			}
 		}
 	}
-	assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, 'c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)) != 0);
+	assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, 'c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)) > 0);
 	write(1, "\x1b[=27u", 6);
 }
 

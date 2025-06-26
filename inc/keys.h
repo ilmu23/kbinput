@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "defs.h"
+
 // sw.kovidgoyal.net/kitty/keyboard-protocol/#key-codes
 
 #define KB_KEY_ESCAPE				27
@@ -100,7 +102,7 @@
 #define KB_KEY_KP_INSERT			57425
 #define KB_KEY_KP_DELETE			57426
 #define KB_KEY_KP_BEGIN				69		/* E */
-#define KB_KEY_KP_BEGIN_2			138775530583861	/* 57427~ */
+#define KB_KEY_KP_BEGIN_2			UINT32_MAX	/* 57427~ */
 #define KB_KEY_MEDIA_PLAY			57428
 #define KB_KEY_MEDIA_PAUSE			57429
 #define KB_KEY_MEDIA_PLAY_PAUSE		57430

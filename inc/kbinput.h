@@ -20,5 +20,5 @@ void	kbinput_delete_listener(const kbinput_listener_id listener);
 void	kbinput_cleanup(void);
 void	kbinput_init(void);
 
-u8	kbinput_add_listener(const kbinput_listener_id listener, const kbinput_key key);
+i8	kbinput_add_listener(const kbinput_listener_id listener, const kbinput_key key);
 u8	kbinput_get_input_protocol(void);

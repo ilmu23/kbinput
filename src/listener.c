@@ -38,6 +38,7 @@ static inline size_t		_seqlen(const char *s);
 static inline char			*_substr(const char *s, const size_t start, const size_t len);
 static inline void			_parse_modifiers(const char *param, kbinput_key *key);
 static inline void			_parse_key_code(const char *param, kbinput_key *key);
+static inline u8			_check_legacy_compatability(const kbinput_key *key);
 static inline u8			_insert_key(vector vec, const kbinput_key *key);
 
 static void	_free_key_group(void *group);
@@ -106,11 +107,13 @@ void	kbinput_delete_listener(const kbinput_listener_id id) {
 	}
 }
 
-u8	kbinput_add_listener(const kbinput_listener_id id, const kbinput_key key) {
+i8	kbinput_add_listener(const kbinput_listener_id id, const kbinput_key key) {
 	vector	vec;
 
 	if (id < 0 || id >= MAX_LISTENERS)
-		return 0;
+		return KB_INVALID_LISTENER_ID;
+	if (input_protocol == KB_INPUT_PROTOCOL_LEGACY && !_check_legacy_compatability(&key))
+		return KB_OPTION_NOT_SUPPORTED;
 	vec = (key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[id].uc_keys : listeners[id].sp_keys;
 	return (_insert_key(vec, &key));
 }
@@ -293,8 +296,21 @@ static inline void	_parse_key_code(const char *param, kbinput_key *key) {
 
 	if (key->code.type == KB_KEY_TYPE_UNICODE)
 		key->code.unicode = strtoul(param, NULL, 10);
-	else for (i = 0; param[i]; i++)
-		key->code.special |= param[i] << (i * 8);
+	else {
+		for (i = 0; param[i] && i < 4; i++)
+			key->code.special |= param[i] << (i * 8);
+		if (i == 4 && param[i])
+			key->code.special = KB_KEY_KP_BEGIN_2;
+	}
+}
+
+static inline u8	_check_legacy_compatability(const kbinput_key *key) {
+	if (key->event_type != KB_EVENT_PRESS)
+		return 0;
+	if (key->modifiers & ~(KB_MOD_SHIFT | KB_MOD_ALT | KB_MOD_CTRL))
+		return 0;
+	// TODO: More specific checks for valid key/mod combinations
+	return 1;
 }
 
 static inline u8	_insert_key(vector vec, const kbinput_key *key) {
