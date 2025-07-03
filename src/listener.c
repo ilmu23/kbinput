@@ -156,7 +156,7 @@ static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 			if (rv == -1)
 				return NULL;
 #ifdef __DEBUG_ECHO_SEQS
-			_print_buf();
+			_print_buf(id);
 #endif /* __DEBUG_ECHO_SEQS */
 		}
 		seq_len = _seqlen(listeners[id].buf);
@@ -170,6 +170,8 @@ static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 		_parse_key_code(params[0], &key);
 		_parse_modifiers(params[1], &key);
 		out = _find_key((key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[id].uc_keys : listeners[id].sp_keys, &key);
+		if (out)
+			out->text = (listeners[id].buf[j++] == '\0') ? 0 : strtoul(&listeners[id].buf[j], NULL, 10);
 		buf_len = strlen(listeners[id].buf);
 		memmove(listeners[id].buf, &listeners[id].buf[seq_len], buf_len - seq_len);
 		for (i = 0; i < seq_len; i++)

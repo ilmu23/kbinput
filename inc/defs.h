@@ -60,6 +60,7 @@ typedef struct __key {
 		};
 		u8	type;
 	}	code;
+	u32	text;
 	u16	modifiers;
 	u8	event_type;
 }	kbinput_key;

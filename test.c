@@ -7,6 +7,7 @@
 //
 // <<test.c>>
 
+#include <ctype.h>
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -35,7 +36,10 @@ void	*press(void *arg) {
 				fprintf(stdout, "SUPER + ");
 		}
 	}
-	fprintf(stdout, "%c pressed\n", key->code.unicode - 0x20);
+	fprintf(stdout, "%c pressed", toupper(key->code.unicode));
+	if (key->text)
+		fprintf(stdout, ", text: %u", key->text);
+	fputc('\n', stdout);
 	return NULL;
 }
 
@@ -60,7 +64,7 @@ void	*release(void *arg) {
 				fprintf(stdout, "SUPER + ");
 		}
 	}
-	fprintf(stdout, "%c released\n", key->code.unicode - 0x20);
+	fprintf(stdout, "%c released\n", toupper(key->code.unicode));
 	return NULL;
 }
 
@@ -106,6 +110,13 @@ static inline void	_init_listeners(const kbinput_listener_id id) {
 
 	write(1, "\x1b[=0u", 5);
 	for (c = 'a'; c <= 'z'; c++) {
+		for (i = 0; i < EVENT_COUNT; i++) {
+			for (j = 0; j < MOD_COUNT; j++) {
+				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) > 0);
+			}
+		}
+	}
+	for (c = '0'; c <= '9'; c++) {
 		for (i = 0; i < EVENT_COUNT; i++) {
 			for (j = 0; j < MOD_COUNT; j++) {
 				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) > 0);
