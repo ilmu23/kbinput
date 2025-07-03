@@ -21,6 +21,9 @@ typedef struct __key_group {
 
 #define _BUFFER_SIZE	64
 
+#define _TERM_ENABLE_ENHANCEMENTS	CSI "=27u"
+#define _TERM_DISABLE_ENHANCEMENTS	CSI "=0u"
+
 #define get_group(v, i)	((key_group *)vector_get(v, i))
 #define get_key(v, i)	((kbinput_key *)vector_get(v, i))
 #define in_bounds(p)	(p != (void *)VECTOR_INDEX_OUT_OF_BOUNDS)
@@ -88,7 +91,9 @@ const kbinput_key	*kbinput_listen(const kbinput_listener_id id) {
 
 	switch (input_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
+			write(1, _TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_ENABLE_ENHANCEMENTS));
 			key = _listen_kitty(id);
+			write(1, _TERM_DISABLE_ENHANCEMENTS, sizeof(_TERM_DISABLE_ENHANCEMENTS));
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
 			key = _listen_legacy(id);

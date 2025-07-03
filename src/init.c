@@ -12,11 +12,10 @@
 
 #include "internal/_kbinput.h"
 
+#define _TERM_POP_FLAGS				CSI "<u"
+#define _TERM_PUSH_FLAGS			CSI ">u"
 #define _TERM_QUERY_ENHANCEMENTS	CSI "?u"
 #define _TERM_QUERY_PRIMARY_ATTRS	CSI "c"
-
-#define _TERM_ENABLE_ENHANCEMENTS	CSI "=27u"
-#define _TERM_DISABLE_ENHANCEMENTS	CSI "=0u"
 
 extern u8	input_protocol;
 
@@ -49,7 +48,7 @@ _kbinput_init_read_response:
 	switch (buf[i]) {
 		case 'u':
 			input_protocol = KB_INPUT_PROTOCOL_KITTY;
-			write(1, _TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_ENABLE_ENHANCEMENTS));
+			write(1, _TERM_PUSH_FLAGS, sizeof(_TERM_PUSH_FLAGS));
 			break ;
 		case 'c':
 			input_protocol = KB_INPUT_PROTOCOL_LEGACY;
@@ -66,6 +65,6 @@ _kbinput_init_read_response:
 
 	for (id = 0; id < MAX_LISTENERS; id++)
 		kbinput_delete_listener(id);
-	write(1, _TERM_DISABLE_ENHANCEMENTS, sizeof(_TERM_DISABLE_ENHANCEMENTS));
+	write(1, _TERM_POP_FLAGS, sizeof(_TERM_POP_FLAGS));
 	tcsetattr(0, TCSANOW, &term_settings.old);
 }
