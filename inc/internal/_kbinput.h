@@ -13,3 +13,7 @@
 
 #include "kbinput.h"
 #include "utils/vector.h"
+
+i32	switch_term_mode(const u8 term_mode);
+
+u32	utf8_decode(const char *c);

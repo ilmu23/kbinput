@@ -12,10 +12,9 @@
 
 #include "internal/_kbinput.h"
 
-#define _TERM_POP_FLAGS				CSI "<u"
-#define _TERM_PUSH_FLAGS			CSI ">u"
-#define _TERM_QUERY_ENHANCEMENTS	CSI "?u"
-#define _TERM_QUERY_PRIMARY_ATTRS	CSI "c"
+#define _TERM_POP_FLAGS			CSI "<u"
+#define _TERM_PUSH_FLAGS		CSI ">u"
+#define _TERM_QUERY_PROTOCOL	CSI "?u" CSI "c"
 
 extern u8	input_protocol;
 
@@ -34,10 +33,12 @@ struct {
 	term_settings.new = term_settings.old;
 	term_settings.new.c_iflag &= ~(ICRNL | IXON);
 	term_settings.new.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-	if (tcsetattr(0, TCSANOW, &term_settings.new) == -1)
-		return ;
-	write(1, _TERM_QUERY_ENHANCEMENTS, sizeof(_TERM_QUERY_ENHANCEMENTS));
-	write(1, _TERM_QUERY_PRIMARY_ATTRS, sizeof(_TERM_QUERY_PRIMARY_ATTRS));
+#ifdef __DEBUG_FORCE_LEGACY_MODE
+	input_protocol = KB_INPUT_PROTOCOL_LEGACY;
+	return ;
+#endif
+	switch_term_mode(TERM_MODE_RAW);
+	write(1, _TERM_QUERY_PROTOCOL, sizeof(_TERM_QUERY_PROTOCOL));
 _kbinput_init_read_response:
 	bytes_read = read(0, buf, sizeof(buf));
 	for (i = 0; i < (size_t)bytes_read && buf[i]; i++)
@@ -55,8 +56,8 @@ _kbinput_init_read_response:
 			break ;
 		default:
 			input_protocol = KB_INPUT_PROTOCOL_ERROR;
-			return ;
 	}
+	switch_term_mode(TERM_MODE_NORMAL);
 	return ;
 }
 
@@ -65,6 +66,11 @@ _kbinput_init_read_response:
 
 	for (id = 0; id < MAX_LISTENERS; id++)
 		kbinput_delete_listener(id);
-	write(1, _TERM_POP_FLAGS, sizeof(_TERM_POP_FLAGS));
-	tcsetattr(0, TCSANOW, &term_settings.old);
+	if (input_protocol == KB_INPUT_PROTOCOL_KITTY)
+		write(1, _TERM_POP_FLAGS, sizeof(_TERM_POP_FLAGS));
+	switch_term_mode(TERM_MODE_NORMAL);
+}
+
+i32	switch_term_mode(const u8 term_mode) {
+	return tcsetattr(0, TCSAFLUSH, (term_mode == TERM_MODE_RAW) ? &term_settings.new : &term_settings.old);
 }

@@ -30,6 +30,7 @@ UTILDIR	=	utils
 
 FILES	=	init.c \
 			listener.c \
+			$(UTILDIR)/utf8.c \
 			$(UTILDIR)/vector.c
 
 SRCS	=	$(addprefix $(SRCDIR)/, $(FILES))

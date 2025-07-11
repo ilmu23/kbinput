@@ -7,6 +7,7 @@
 //
 // <<listener.c>>
 
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -38,9 +39,12 @@ static inline key_group		*_new_group(const u32 code);
 static inline size_t		_find_group(const vector vec, const kbinput_key *key);
 static inline size_t		_strlcpy(char * dst, const char *src, const size_t n);
 static inline size_t		_seqlen(const char *s);
+static inline size_t		_legacy_parse_escape(const char *seq, kbinput_key *key);
 static inline char			*_substr(const char *s, const size_t start, const size_t len);
-static inline void			_parse_modifiers(const char *param, kbinput_key *key);
-static inline void			_parse_key_code(const char *param, kbinput_key *key);
+static inline void			_kitty_parse_modifiers(const char *param, kbinput_key *key);
+static inline void			_kitty_parse_key_code(const char *param, kbinput_key *key);
+static inline void			_legacy_check_backspace(const u8 c, kbinput_key *key);
+static inline u32			_legacy_parse_codepoint(const char *buf, const size_t buf_len);
 static inline u8			_check_legacy_compatability(const kbinput_key *key);
 static inline u8			_insert_key(vector vec, const kbinput_key *key);
 
@@ -75,12 +79,25 @@ kbinput_listener_id	kbinput_new_listener(void) {
 			break ;
 	if (i == MAX_LISTENERS)
 		return KB_LISTENER_LIST_FULL;
-	listeners[i].uc_keys = vector(key_group *, 64, _free_key_group);
-	listeners[i].sp_keys = vector(key_group *, 16, _free_key_group);
-	if (!listeners[i].uc_keys || !listeners[i].sp_keys) {
-		vector_delete(listeners[i].uc_keys);
-		vector_delete(listeners[i].sp_keys);
-		return -1;
+	switch (input_protocol) {
+		case KB_INPUT_PROTOCOL_KITTY:
+			listeners[i].uc_keys = vector(key_group *, 64, _free_key_group);
+			listeners[i].sp_keys = vector(key_group *, 16, _free_key_group);
+			if (!listeners[i].uc_keys || !listeners[i].sp_keys) {
+				vector_delete(listeners[i].uc_keys);
+				vector_delete(listeners[i].sp_keys);
+				return -1;
+			}
+			break ;
+		case KB_INPUT_PROTOCOL_LEGACY:
+			listeners[i].uc_keys = vector(key_group *, 64, _free_key_group);
+			if (!listeners[i].uc_keys) {
+				vector_delete(listeners[i].uc_keys);
+				return -1;
+			}
+			break ;
+		case KB_INPUT_PROTOCOL_ERROR:
+			return -1;
 	}
 	listeners[i].in_use = 1;
 	return listeners[i].id;
@@ -89,6 +106,8 @@ kbinput_listener_id	kbinput_new_listener(void) {
 const kbinput_key	*kbinput_listen(const kbinput_listener_id id) {
 	const kbinput_key	*key;
 
+	if (switch_term_mode(TERM_MODE_RAW) == -1)
+		return NULL;
 	switch (input_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
 			write(1, _TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_ENABLE_ENHANCEMENTS));
@@ -101,7 +120,7 @@ const kbinput_key	*kbinput_listen(const kbinput_listener_id id) {
 		default:
 			key = NULL;
 	}
-	return key;
+	return (switch_term_mode(TERM_MODE_NORMAL) != -1) ? key : NULL;
 }
 
 void	kbinput_delete_listener(const kbinput_listener_id id) {
@@ -151,9 +170,10 @@ static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 
 	out = NULL;
 	while (!out) {
+		key = kbinput_key(KB_KEY_TYPE_UNICODE, 0, 0, KB_EVENT_PRESS, NULL);
 		if (!*listeners[id].buf) {
 			rv = read(0, listeners[id].buf, _BUFFER_SIZE);
-			if (rv == -1)
+			if (rv < 1)
 				return NULL;
 #ifdef __DEBUG_ECHO_SEQS
 			_print_buf(id);
@@ -167,16 +187,14 @@ static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 			;
 		params[1] = _substr(listeners[id].buf, i, j - i);
 		key.code.type = (listeners[id].buf[seq_len - 1] == 'u') ? KB_KEY_TYPE_UNICODE : KB_KEY_TYPE_SPECIAL;
-		_parse_key_code(params[0], &key);
-		_parse_modifiers(params[1], &key);
+		_kitty_parse_key_code(params[0], &key);
+		_kitty_parse_modifiers(params[1], &key);
 		out = _find_key((key.code.type == KB_KEY_TYPE_UNICODE) ? listeners[id].uc_keys : listeners[id].sp_keys, &key);
 		if (out)
 			out->text = (listeners[id].buf[j++] == '\0') ? 0 : strtoul(&listeners[id].buf[j], NULL, 10);
 		buf_len = strlen(listeners[id].buf);
 		memmove(listeners[id].buf, &listeners[id].buf[seq_len], buf_len - seq_len);
-		for (i = 0; i < seq_len; i++)
-			listeners[id].buf[buf_len - seq_len + i] = '\0';
-		memset(&key, 0, sizeof(key));
+		memset(&listeners[id].buf[buf_len - seq_len], 0, seq_len);
 		free(params[1]);
 		free(params[0]);
 	}
@@ -184,7 +202,91 @@ static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 }
 
 static inline kbinput_key	*_listen_legacy(const kbinput_listener_id id) {
-	return (void *)(uintptr_t)id;
+	kbinput_key	*out;
+	kbinput_key	key;
+	ssize_t		rv;
+	size_t		buf_len;
+	size_t		i;
+
+	out = NULL;
+	while (!out) {
+		key = kbinput_key(KB_KEY_TYPE_UNICODE, 0, 0, KB_EVENT_PRESS, NULL);
+		if (!*listeners[id].buf) {
+			rv = read(0, listeners[id].buf, 8);
+			if (rv < 1)
+				return NULL;
+		}
+		i = 0;
+		if (listeners[id].buf[0] == '\x1b') switch (listeners[id].buf[1]) {
+			case '[':
+				i = _legacy_parse_escape(&listeners[id].buf[2], &key);
+				goto _listen_legacy_match_key;
+			case '\0':
+				key = kbinput_key(KB_KEY_TYPE_UNICODE, '\x1b', 0, KB_EVENT_PRESS, NULL);
+				goto _listen_legacy_match_key;
+			default:
+				key.modifiers |= KB_MOD_ALT;
+				i++;
+		}
+		if (listeners[id].buf[i] == '\x7f' || listeners[id].buf[i] == '\x8')
+			_legacy_check_backspace(listeners[id].buf[i], &key);
+		else if (isascii(listeners[id].buf[i])) {
+			if (listeners[id].buf[i] == '\x1b') {
+				if (listeners[id].buf[i + 1] == '[')
+					i = _legacy_parse_escape(&listeners[id].buf[i + 2], &key);
+				else
+					key.code.unicode = '\x1b';
+			} else if (listeners[id].buf[i] < ' ') switch (listeners[id].buf[i]) {
+				case '\x9':
+					key.code.unicode = '\t';
+					break ;
+				case '\x0':
+					key.modifiers |= KB_MOD_CTRL;
+					key.code.unicode = ' ';
+					break ;
+				case '\xd':
+					key.code.unicode = '\r';
+					break ;
+				case '\x1c':
+					key.modifiers |= KB_MOD_CTRL;
+					key.code.unicode = '\\';
+					break ;
+				case '\x1d':
+					key.modifiers |= KB_MOD_CTRL;
+					key.code.unicode = ']';
+					break ;
+				case '\x1e':
+					key.modifiers |= KB_MOD_CTRL;
+					key.code.unicode = '^';
+					break ;
+				case '\x1f':
+					key.modifiers |= KB_MOD_CTRL;
+					key.code.unicode = '/';
+					break ;
+				default:
+					key.modifiers |= KB_MOD_CTRL;
+					key.code.unicode = listeners[id].buf[i] + '`';
+			} else
+				key.code.unicode = listeners[id].buf[i];
+		} else {
+			key.code.unicode = _legacy_parse_codepoint(&listeners[id].buf[i], rv - i);
+			if (key.code.unicode == UINT32_MAX)
+				return NULL;
+			if (key.code.unicode > 0x7F)
+				i = min(i + 1, (size_t)rv);
+			else if (key.code.unicode > 0x7FF)
+				i = min(i + 2, (size_t)rv);
+			else
+				i = min(i + 3, (size_t)rv);
+		}
+_listen_legacy_match_key:
+		out = _find_key(listeners[id].uc_keys, &key);
+		buf_len = max(strlen(listeners[id].buf), 1);
+		i++;
+		memmove(listeners[id].buf, &listeners[id].buf[i], buf_len - i);
+		memset(&listeners[id].buf[buf_len - i], 0, i);
+	}
+	return out;
 }
 
 static inline kbinput_key	*_find_key(const vector vec, const kbinput_key *key) {
@@ -267,6 +369,12 @@ static inline size_t	_seqlen(const char *s) {
 	return i;
 }
 
+static inline size_t	_legacy_parse_escape(const char *seq, kbinput_key *key) {
+	return 0;
+	(void)seq;
+	(void)key;
+}
+
 static inline char	*_substr(const char *s, const size_t start, const size_t len) {
 	size_t	_len;
 	char	*out;
@@ -278,7 +386,7 @@ static inline char	*_substr(const char *s, const size_t start, const size_t len)
 	return out;
 }
 
-static inline void	_parse_modifiers(const char *param, kbinput_key *key) {
+static inline void	_kitty_parse_modifiers(const char *param, kbinput_key *key) {
 	const char	*end;
 	u8			canon_event;
 
@@ -298,7 +406,7 @@ static inline void	_parse_modifiers(const char *param, kbinput_key *key) {
 	}
 }
 
-static inline void	_parse_key_code(const char *param, kbinput_key *key) {
+static inline void	_kitty_parse_key_code(const char *param, kbinput_key *key) {
 	size_t	i;
 
 	if (key->code.type == KB_KEY_TYPE_UNICODE)
@@ -311,11 +419,40 @@ static inline void	_parse_key_code(const char *param, kbinput_key *key) {
 	}
 }
 
+static inline void	_legacy_check_backspace(const u8 c, kbinput_key *key) {
+	// TODO: Check against kbs terminfo entry
+	key->code.unicode = c;
+}
+
+static inline u32	_legacy_parse_codepoint(const char *buf, const size_t buf_len) {
+	size_t	len;
+	size_t	i;
+	char	_buf[4];
+
+	switch (*buf & 0x70) {
+		case 0x70:
+			len = 4;
+			break ;
+		case 0x60:
+			len = 3;
+			break ;
+		case 0x40:
+			len = 2;
+	}
+	for (i = 0; i < buf_len && i < len; i++)
+		_buf[i] = buf[i];
+	if (i < len && read(0, &_buf[i], len - i) != (ssize_t)(len - i))
+		return UINT32_MAX;
+	return utf8_decode(_buf);
+}
+
 static inline u8	_check_legacy_compatability(const kbinput_key *key) {
 	if (key->event_type != KB_EVENT_PRESS)
 		return 0;
-	if (key->modifiers & ~(KB_MOD_SHIFT | KB_MOD_ALT | KB_MOD_CTRL))
-		return 0;
+	if (key->modifiers & ~(KB_MOD_IGN_LCK | KB_MOD_ALT | KB_MOD_CTRL)) {
+		if (!(key->modifiers & KB_MOD_SHIFT && key->code.unicode == '\t' && !(key->modifiers & ~(KB_MOD_SHIFT | KB_MOD_IGN_LCK | KB_MOD_ALT | KB_MOD_CTRL))))
+			return 0;
+	}
 	// TODO: More specific checks for valid key/mod combinations
 	return 1;
 }

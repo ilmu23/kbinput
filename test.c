@@ -104,27 +104,30 @@ static u16	mods[MOD_COUNT] = {
 };
 
 static inline void	_init_listeners(const kbinput_listener_id id) {
+#ifdef __DEBUG_IGNORE_ADD_LISTENER_FAIL
+	static u8	ign = 1;
+#else
+	static u8	ign = 0;
+#endif
 	size_t	i;
 	size_t	j;
 	char	c;
 
-	write(1, "\x1b[=0u", 5);
 	for (c = 'a'; c <= 'z'; c++) {
 		for (i = 0; i < EVENT_COUNT; i++) {
 			for (j = 0; j < MOD_COUNT; j++) {
-				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) > 0);
+				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) > 0 || ign);
 			}
 		}
 	}
 	for (c = '0'; c <= '9'; c++) {
 		for (i = 0; i < EVENT_COUNT; i++) {
 			for (j = 0; j < MOD_COUNT; j++) {
-				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) > 0);
+				assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, c, mods[j], events[i].et, events[i].fn)) > 0 || ign);
 			}
 		}
 	}
-	assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, 'c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)) > 0);
-	write(1, "\x1b[=27u", 6);
+	assert(kbinput_add_listener(id, key(KB_KEY_TYPE_UNICODE, 'c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)) > 0 || ign);
 }
 
 i32	main(void) {

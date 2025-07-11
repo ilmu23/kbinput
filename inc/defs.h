@@ -64,3 +64,12 @@ typedef struct __key {
 	u16	modifiers;
 	u8	event_type;
 }	kbinput_key;
+
+#define kbinput_key(key_type, key_code, mods, event, function)	(\
+		(kbinput_key){\
+			.code.type = key_type,\
+			.code.unicode = key_code,\
+			.modifiers = mods,\
+			.event_type = event,\
+			.fn = function\
+		})
