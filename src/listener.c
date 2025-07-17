@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "internal/_kbinput.h"
+#include "internal/utils/string.h"
 #include "internal/utils/vector.h"
 
 typedef struct __key_group {
@@ -25,8 +26,8 @@ typedef struct __key_group {
 #define _TERM_ENABLE_ENHANCEMENTS	CSI "=27u"
 #define _TERM_DISABLE_ENHANCEMENTS	CSI "=0u"
 
-#define get_group(v, i)	((key_group *)vector_get(v, i))
-#define get_key(v, i)	((kbinput_key *)vector_get(v, i))
+#define get_group(v, i)	((key_group **)vector_get(v, i))
+#define get_key(v, i)	((kbinput_key **)vector_get(v, i))
 #define in_bounds(p)	(p != (void *)VECTOR_INDEX_OUT_OF_BOUNDS)
 
 #define check_mods(x, y)	((y & KB_MOD_IGN_LCK) ? (x & ~(KB_MOD_CAPS_LCK | KB_MOD_NUM_LCK)) == (y & ~KB_MOD_IGN_LCK) : x == y)
@@ -37,10 +38,8 @@ static inline kbinput_key	*_find_key(const vector vec, const kbinput_key *key);
 static inline kbinput_key	*_new_key(const kbinput_key *key);
 static inline key_group		*_new_group(const u32 code);
 static inline size_t		_find_group(const vector vec, const kbinput_key *key);
-static inline size_t		_strlcpy(char * dst, const char *src, const size_t n);
 static inline size_t		_seqlen(const char *s);
 static inline size_t		_legacy_parse_escape(const char *seq, kbinput_key *key);
-static inline char			*_substr(const char *s, const size_t start, const size_t len);
 static inline void			_kitty_parse_modifiers(const char *param, kbinput_key *key);
 static inline void			_kitty_parse_key_code(const char *param, kbinput_key *key);
 static inline void			_legacy_check_backspace(const u8 c, kbinput_key *key);
@@ -110,9 +109,9 @@ const kbinput_key	*kbinput_listen(const kbinput_listener_id id) {
 		return NULL;
 	switch (input_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			write(1, _TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_ENABLE_ENHANCEMENTS));
+//			write(1, _TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_ENABLE_ENHANCEMENTS));
 			key = _listen_kitty(id);
-			write(1, _TERM_DISABLE_ENHANCEMENTS, sizeof(_TERM_DISABLE_ENHANCEMENTS));
+//			write(1, _TERM_DISABLE_ENHANCEMENTS, sizeof(_TERM_DISABLE_ENHANCEMENTS));
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
 			key = _listen_legacy(id);
@@ -172,7 +171,9 @@ static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 	while (!out) {
 		key = kbinput_key(KB_KEY_TYPE_UNICODE, 0, 0, KB_EVENT_PRESS, NULL);
 		if (!*listeners[id].buf) {
+			write(1, _TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_ENABLE_ENHANCEMENTS));
 			rv = read(0, listeners[id].buf, _BUFFER_SIZE);
+			write(1, _TERM_DISABLE_ENHANCEMENTS, sizeof(_TERM_DISABLE_ENHANCEMENTS));
 			if (rv < 1)
 				return NULL;
 #ifdef __DEBUG_ECHO_SEQS
@@ -182,10 +183,10 @@ static inline kbinput_key	*_listen_kitty(const kbinput_listener_id id) {
 		seq_len = _seqlen(listeners[id].buf);
 		for (i = j = sizeof(CSI) - 1; listeners[id].buf[j] && listeners[id].buf[j] != ';'; j++)
 			;
-		params[0] = _substr(listeners[id].buf, i, j - i);
+		params[0] = __substr(listeners[id].buf, i, j - i);
 		for (i = ++j; listeners[id].buf[j] && listeners[id].buf[j] != ';'; j++)
 			;
-		params[1] = _substr(listeners[id].buf, i, j - i);
+		params[1] = __substr(listeners[id].buf, i, j - i);
 		key.code.type = (listeners[id].buf[seq_len - 1] == 'u') ? KB_KEY_TYPE_UNICODE : KB_KEY_TYPE_SPECIAL;
 		_kitty_parse_key_code(params[0], &key);
 		_kitty_parse_modifiers(params[1], &key);
@@ -294,12 +295,14 @@ static inline kbinput_key	*_find_key(const vector vec, const kbinput_key *key) {
 	key_group	*group;
 	size_t		size;
 	size_t		i;
+	void		*tmp;
 
-	group = get_group(vec, _find_group(vec, key));
-	if (!in_bounds(group) || group->code != key->code.unicode)
+	tmp = get_group(vec, _find_group(vec, key));
+	group = (tmp && in_bounds(tmp)) ? *(key_group **)tmp : NULL;
+	if (!group || group->code != key->code.unicode)
 		return NULL;
 	for (i = 0, size = vector_size(group->keys); i < size; i++) {
-		out = get_key(group->keys, i);
+		out = *get_key(group->keys, i);
 		if (check_mods(key->modifiers, out->modifiers) && key->event_type == out->event_type)
 			break ;
 	}
@@ -345,20 +348,11 @@ static inline size_t	_find_group(const vector vec, const kbinput_key *key) {
 	size_t		i;
 
 	for (i = 0, size = vector_size(vec); i < size; i++) {
-		group = get_group(vec, i);
+		group = *get_group(vec, i);
 		if (group->code >= key->code.unicode)
 			break ;
 	}
 	return i;
-}
-
-static inline size_t	_strlcpy(char * dst, const char *src, const size_t n) {
-	size_t	len;
-
-	len = strnlen(src, n - 1);
-	memcpy(dst, src, len);
-	dst[len] = '\0';
-	return strlen(src);
 }
 
 static inline size_t	_seqlen(const char *s) {
@@ -373,17 +367,6 @@ static inline size_t	_legacy_parse_escape(const char *seq, kbinput_key *key) {
 	return 0;
 	(void)seq;
 	(void)key;
-}
-
-static inline char	*_substr(const char *s, const size_t start, const size_t len) {
-	size_t	_len;
-	char	*out;
-
-	_len = strnlen(&s[start], len) + 1;
-	out = malloc(_len * sizeof(*out));
-	if (out)
-		_strlcpy(out, &s[start], _len);
-	return out;
 }
 
 static inline void	_kitty_parse_modifiers(const char *param, kbinput_key *key) {
@@ -460,19 +443,23 @@ static inline u8	_check_legacy_compatability(const kbinput_key *key) {
 static inline u8	_insert_key(vector vec, const kbinput_key *key) {
 	kbinput_key	*_key;
 	key_group	*group;
+	size_t		size;
 	size_t		i;
+	void		*tmp;
 	u8			match;
 
 	i = _find_group(vec, key);
-	group = get_group(vec, i);
-	if (!in_bounds(group) || group->code != key->code.unicode) {
+	tmp = get_group(vec, i);
+	group = (tmp && in_bounds(tmp)) ? *(key_group **)tmp : NULL;
+	if (!group || group->code != key->code.unicode) {
 		group = _new_group(key->code.unicode);
 		if (!group || !vector_insert(vec, i, group))
 			return 0;
 		_key = _new_key(key);
 		return (_key) ? vector_push(group->keys, _key) : 0;
 	}
-	for (i = match = 0, _key = get_key(group->keys, i); in_bounds(_key); _key = get_key(group->keys, ++i)) {
+	for (i = match = 0, size = vector_size(group->keys); i < size; i++) {
+		_key = *get_key(group->keys, i);
 		if (key->modifiers == _key->modifiers && key->event_type == _key->event_type) {
 			match = 1;
 			break ;

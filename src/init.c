@@ -23,11 +23,21 @@ struct {
 	struct termios	new;
 }	term_settings;
 
+struct {
+	u8	init_done;
+	u8	clean_done;
+}	status = {
+	.init_done = 0,
+	.clean_done = 0
+};
+
 [[gnu::constructor]] void	kbinput_init(void) {
 	ssize_t	bytes_read;
 	size_t	i;
 	char	buf[128];
 
+	if (status.init_done)
+		return ;
 	if (tcgetattr(0, &term_settings.old) == -1)
 		return ;
 	term_settings.new = term_settings.old;
@@ -58,17 +68,21 @@ _kbinput_init_read_response:
 			input_protocol = KB_INPUT_PROTOCOL_ERROR;
 	}
 	switch_term_mode(TERM_MODE_NORMAL);
+	status.init_done = 1;
 	return ;
 }
 
 [[gnu::destructor]] void	kbinput_cleanup(void) {
 	kbinput_listener_id	id;
 
+	if (status.clean_done)
+		return ;
 	for (id = 0; id < MAX_LISTENERS; id++)
 		kbinput_delete_listener(id);
 	if (input_protocol == KB_INPUT_PROTOCOL_KITTY)
 		write(1, _TERM_POP_FLAGS, sizeof(_TERM_POP_FLAGS));
 	switch_term_mode(TERM_MODE_NORMAL);
+	status.clean_done = 1;
 }
 
 i32	switch_term_mode(const u8 term_mode) {

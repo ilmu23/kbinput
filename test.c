@@ -69,6 +69,7 @@ void	*release(void *arg) {
 }
 
 void	*quit([[gnu::unused]] void *arg) {
+	kbinput_cleanup();
 	exit(0);
 }
 

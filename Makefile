@@ -13,7 +13,7 @@ BUILD	=	fsan
 
 CC				=	gcc
 cflags.common	=	-Wall -Wextra -Werror -Wpedantic -pedantic-errors -std=gnu2x -fpic -I$(INCDIR)
-cflags.debug	=	-g -D__DEBUG_ECHO_SEQS
+cflags.debug	=	-g
 cflags.fsan		=	$(cflags.debug) -fsanitize=address,undefined
 cflags.normal	=	-s -O1
 cflags.extra	=	
@@ -31,6 +31,7 @@ UTILDIR	=	utils
 FILES	=	init.c \
 			listener.c \
 			$(UTILDIR)/utf8.c \
+			$(UTILDIR)/string.c \
 			$(UTILDIR)/vector.c
 
 SRCS	=	$(addprefix $(SRCDIR)/, $(FILES))
