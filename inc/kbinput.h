@@ -21,4 +21,5 @@ void	kbinput_cleanup(void);
 void	kbinput_init(void);
 
 i8	kbinput_add_listener(const kbinput_listener_id listener, const kbinput_key key);
+u8	kbinput_set_cursor_mode(const kbinput_cursor_mode mode);
 u8	kbinput_get_input_protocol(void);

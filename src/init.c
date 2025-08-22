@@ -18,6 +18,11 @@
 
 extern u8	input_protocol;
 
+extern struct {
+	kbinput_cursor_mode	desired;
+	kbinput_cursor_mode	current;
+}	cursor_mode;
+
 struct {
 	struct termios	old;
 	struct termios	new;
@@ -31,7 +36,7 @@ struct {
 	.clean_done = 0
 };
 
-[[gnu::constructor]] void	kbinput_init(void) {
+void	kbinput_init(void) {
 	ssize_t	bytes_read;
 	size_t	i;
 	char	buf[128];
@@ -45,6 +50,9 @@ struct {
 	term_settings.new.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 #ifdef __DEBUG_FORCE_LEGACY_MODE
 	input_protocol = KB_INPUT_PROTOCOL_LEGACY;
+	if (ti_load(getenv("TERM")))
+		setup_legacy_key_seqs();
+	status.init_done = 1;
 	return ;
 #endif
 	switch_term_mode(TERM_MODE_RAW);
@@ -60,9 +68,12 @@ _kbinput_init_read_response:
 		case 'u':
 			input_protocol = KB_INPUT_PROTOCOL_KITTY;
 			write(1, _TERM_PUSH_FLAGS, sizeof(_TERM_PUSH_FLAGS));
+			write(1, TERM_ENABLE_ENHANCEMENTS, sizeof(TERM_ENABLE_ENHANCEMENTS));
 			break ;
 		case 'c':
 			input_protocol = KB_INPUT_PROTOCOL_LEGACY;
+			if (ti_load(getenv("TERM")))
+				setup_legacy_key_seqs();
 			break ;
 		default:
 			input_protocol = KB_INPUT_PROTOCOL_ERROR;
@@ -72,16 +83,20 @@ _kbinput_init_read_response:
 	return ;
 }
 
-[[gnu::destructor]] void	kbinput_cleanup(void) {
+void	kbinput_cleanup(void) {
 	kbinput_listener_id	id;
 
 	if (status.clean_done)
 		return ;
 	for (id = 0; id < MAX_LISTENERS; id++)
 		kbinput_delete_listener(id);
-	if (input_protocol == KB_INPUT_PROTOCOL_KITTY)
+	if (input_protocol == KB_INPUT_PROTOCOL_KITTY) {
+		write(1, TERM_DISABLE_ENHANCEMENTS, sizeof(TERM_DISABLE_ENHANCEMENTS));
 		write(1, _TERM_POP_FLAGS, sizeof(_TERM_POP_FLAGS));
+	}
 	switch_term_mode(TERM_MODE_NORMAL);
+	if (cursor_mode.current == OFF)
+		write(1, TERM_SHOW_CURSOR, sizeof(TERM_SHOW_CURSOR));
 	status.clean_done = 1;
 }
 

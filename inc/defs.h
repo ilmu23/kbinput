@@ -36,9 +36,6 @@ typedef	uint64_t	u64;
 #define KB_EVENT_REPEAT		0x2U // canon value: 2
 #define KB_EVENT_RELEASE	0x4U // canon value: 3
 
-#define KB_KEY_TYPE_UNICODE	1
-#define KB_KEY_TYPE_SPECIAL	2
-
 #define KB_LISTENER_LIST_FULL	-1
 #define KB_INVALID_LISTENER_ID	-2
 #define KB_OPTION_NOT_SUPPORTED	-3
@@ -51,24 +48,23 @@ typedef i8	kbinput_listener_id;
 
 typedef void *	(*kbinput_fn)(void *);
 
+typedef enum __cursor_mode {
+	ON,
+	OFF,
+	SHOW
+}	kbinput_cursor_mode;
+
 typedef struct __key {
 	kbinput_fn	fn;
-	struct {
-		union {
-			u32	unicode;
-			u32	special;
-		};
-		u8	type;
-	}	code;
-	u32	text;
-	u16	modifiers;
-	u8	event_type;
+	u32			code;
+	u32			text;
+	u16			modifiers;
+	u8			event_type;
 }	kbinput_key;
 
-#define kbinput_key(key_type, key_code, mods, event, function)	(\
+#define kbinput_key(key_code, mods, event, function)	(\
 		(kbinput_key){\
-			.code.type = key_type,\
-			.code.unicode = key_code,\
+			.code = key_code,\
 			.modifiers = mods,\
 			.event_type = event,\
 			.fn = function\

@@ -29,9 +29,11 @@ INCDIR	=	inc
 UTILDIR	=	utils
 
 FILES	=	init.c \
+			legacy_seqs.c \
 			listener.c \
 			$(UTILDIR)/utf8.c \
 			$(UTILDIR)/string.c \
+			$(UTILDIR)/terminfo.c \
 			$(UTILDIR)/vector.c
 
 SRCS	=	$(addprefix $(SRCDIR)/, $(FILES))
