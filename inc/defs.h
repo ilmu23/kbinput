@@ -46,7 +46,7 @@ typedef	uint64_t	u64;
 
 typedef i8	kbinput_listener_id;
 
-typedef void *	(*kbinput_fn)(void *);
+typedef void	*(*kbinput_fn)(void *);
 
 typedef enum __cursor_mode {
 	ON,
@@ -67,5 +67,5 @@ typedef struct __key {
 			.code = key_code,\
 			.modifiers = mods,\
 			.event_type = event,\
-			.fn = function\
+			.fn = (kbinput_fn)function\
 		})
