@@ -28,6 +28,9 @@ u32	utf8_decode(const char *c) {
 			break ;
 		case 0x40U:
 			out = decode_start_2(c[0]) | decode_cont(c[1], 0);
+			break ;
+		default:
+			out = 0;
 	}
 	return out;
 }

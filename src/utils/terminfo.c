@@ -201,7 +201,7 @@ static inline i32	_open(const char *term) {
 	vector_push(dirs, "/etc/terminfo");
 	vector_push(dirs, "/lib/terminfo");
 	vector_push(dirs, "/usr/share/terminfo");
-	for (i = 0, size = vector_size(dirs); i < size; i++) {
+	for (i = rv = 0, size = vector_size(dirs); i < size; i++) {
 		rv = snprintf(path, PATH_MAX, "%s/%s", *(const char **)vector_get(dirs, i), term);
 		if (rv == -1 || access(path, R_OK) == 0)
 			break ;

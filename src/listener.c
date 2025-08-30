@@ -224,7 +224,8 @@ static inline kbinput_key	*_listen_legacy(const kbinput_listener_id id) {
 			rv = read(0, listeners[id].buf, 8);
 			if (rv < 1)
 				return NULL;
-		}
+		} else
+			rv = strlen(listeners[id].buf);
 		i = 0;
 		if (_legacy_parse_escape(listeners[id].buf, &key, &buf_len))
 			goto _listen_legacy_match_key;
