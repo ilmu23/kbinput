@@ -112,9 +112,11 @@ const kbinput_key	*kbinput_listen(const kbinput_listener_id id) {
 		return NULL;
 	switch (input_protocol) {
 		case KB_INPUT_PROTOCOL_KITTY:
-			write(1, TERM_ENABLE_ENHANCEMENTS, sizeof(TERM_ENABLE_ENHANCEMENTS));
+			if (write(1, TERM_ENABLE_ENHANCEMENTS, sizeof(TERM_ENABLE_ENHANCEMENTS)) == -1)
+				return NULL;
 			key = _listen_kitty(id);
-			write(1, TERM_DISABLE_ENHANCEMENTS, sizeof(TERM_DISABLE_ENHANCEMENTS));
+			if (write(1, TERM_DISABLE_ENHANCEMENTS, sizeof(TERM_DISABLE_ENHANCEMENTS)) == -1)
+				return NULL;
 			break ;
 		case KB_INPUT_PROTOCOL_LEGACY:
 			key = _listen_legacy(id);
@@ -758,6 +760,9 @@ static inline u32	_legacy_parse_codepoint(const char *buf, const size_t buf_len)
 			break ;
 		case 0x40:
 			len = 2;
+			break ;
+		default:
+			len = 1;
 	}
 	for (i = 0; i < buf_len && i < len; i++)
 		_buf[i] = buf[i];

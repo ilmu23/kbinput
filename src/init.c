@@ -56,7 +56,10 @@ void	kbinput_init(void) {
 	return ;
 #endif
 	switch_term_mode(TERM_MODE_RAW);
-	write(1, _TERM_QUERY_PROTOCOL, sizeof(_TERM_QUERY_PROTOCOL));
+	if (write(1, _TERM_QUERY_PROTOCOL, sizeof(_TERM_QUERY_PROTOCOL)) == -1) {
+		input_protocol = KB_INPUT_PROTOCOL_ERROR;
+		return ;
+	}
 _kbinput_init_read_response:
 	bytes_read = read(0, buf, sizeof(buf));
 	for (i = 0; i < (size_t)bytes_read && buf[i]; i++)
@@ -66,9 +69,10 @@ _kbinput_init_read_response:
 		goto _kbinput_init_read_response;
 	switch (buf[i]) {
 		case 'u':
-			input_protocol = KB_INPUT_PROTOCOL_KITTY;
-			write(1, _TERM_PUSH_FLAGS, sizeof(_TERM_PUSH_FLAGS));
-			write(1, TERM_ENABLE_ENHANCEMENTS, sizeof(TERM_ENABLE_ENHANCEMENTS));
+			if (write(1, _TERM_PUSH_FLAGS TERM_ENABLE_ENHANCEMENTS, sizeof(_TERM_PUSH_FLAGS TERM_ENABLE_ENHANCEMENTS)) == -1)
+				input_protocol = KB_INPUT_PROTOCOL_ERROR;
+			else
+				input_protocol = KB_INPUT_PROTOCOL_KITTY;
 			break ;
 		case 'c':
 			input_protocol = KB_INPUT_PROTOCOL_LEGACY;
@@ -90,13 +94,9 @@ void	kbinput_cleanup(void) {
 		return ;
 	for (id = 0; id < MAX_LISTENERS; id++)
 		kbinput_delete_listener(id);
-	if (input_protocol == KB_INPUT_PROTOCOL_KITTY) {
-		write(1, TERM_DISABLE_ENHANCEMENTS, sizeof(TERM_DISABLE_ENHANCEMENTS));
-		write(1, _TERM_POP_FLAGS, sizeof(_TERM_POP_FLAGS));
-	}
+	if (input_protocol == KB_INPUT_PROTOCOL_KITTY && write(1, _TERM_POP_FLAGS, sizeof(_TERM_POP_FLAGS)) == -1) { ; }
 	switch_term_mode(TERM_MODE_NORMAL);
-	if (cursor_mode.current == OFF)
-		write(1, TERM_SHOW_CURSOR, sizeof(TERM_SHOW_CURSOR));
+	if (cursor_mode.current == OFF && write(1, TERM_SHOW_CURSOR, sizeof(TERM_SHOW_CURSOR)) == -1) { ; }
 	status.clean_done = 1;
 }
 
