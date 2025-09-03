@@ -32,9 +32,23 @@ void	*press(void *arg) {
 	key = arg;
 	fprintf(stdout, "event: ");
 	_print_mods(key);
-	if (isprint(key->code))
-		fprintf(stdout, "%c pressed", toupper(key->code));
-	else switch (key->code) {
+	switch (key->code) {
+		case KB_KEY_UP:
+		case KB_KEY_LEGACY_UP:
+			fprintf(stdout, "<UP> pressed");
+			break ;
+		case KB_KEY_DOWN:
+		case KB_KEY_LEGACY_DOWN:
+			fprintf(stdout, "<DOWN> pressed");
+			break ;
+		case KB_KEY_LEFT:
+		case KB_KEY_LEGACY_LEFT:
+			fprintf(stdout, "<LEFT> pressed");
+			break ;
+		case KB_KEY_RIGHT:
+		case KB_KEY_LEGACY_RIGHT:
+			fprintf(stdout, "<RIGHT> pressed");
+			break ;
 		case KB_KEY_INSERT:
 		case KB_KEY_LEGACY_INSERT:
 			fprintf(stdout, "<INS> pressed");
@@ -58,6 +72,10 @@ void	*press(void *arg) {
 		case KB_KEY_PAGE_DOWN:
 		case KB_KEY_LEGACY_PAGE_DOWN:
 			fprintf(stdout, "<PGD> pressed");
+			break ;
+		default:
+			if (isprint(key->code))
+				fprintf(stdout, "%c pressed", toupper(key->code));
 	}
 	if (key->text)
 		fprintf(stdout, ", text: %u", key->text);
@@ -133,12 +151,20 @@ static inline void	_init_listeners(const kbinput_listener_id id) {
 			}
 		}
 	}
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_UP, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_DOWN, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_LEFT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_RIGHT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_INSERT, 0, KB_EVENT_PRESS, press)) > 0 || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_HOME, 0, KB_EVENT_PRESS, press)) > 0 || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_PAGE_UP, 0, KB_EVENT_PRESS, press)) > 0 || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_DELETE, 0, KB_EVENT_PRESS, press)) > 0 || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_END, 0, KB_EVENT_PRESS, press)) > 0 || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_PAGE_DOWN, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_UP, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_DOWN, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_LEFT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
+	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_RIGHT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_INSERT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_HOME, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
 	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_PAGE_UP, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
@@ -152,14 +178,21 @@ i32	main(void) {
 	kbinput_listener_id	listener;
 	const kbinput_key	*key;
 
+	kbinput_init();
+	write(1, "\x1b[?1h", 5);
 	listener = kbinput_new_listener();
 	if (listener < 0)
 		return 1;
 	_init_listeners(listener);
 	while (1) {
 		key = kbinput_listen(listener);
-		if (!key)
+		if (!key) {
+			write(1, "\x1b[?1l", 5);
+			kbinput_cleanup();
 			return 1;
+		}
 		key->fn((void *)key);
 	}
+	write(1, "\x1b[?1l", 5);
+	kbinput_cleanup();
 }
