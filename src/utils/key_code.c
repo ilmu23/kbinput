@@ -1,0 +1,204 @@
+// ███████╗████████╗     ██████╗ ██╗   ██╗████████╗ ██████╗██╗  ██╗ █████╗ ██████╗
+// ██╔════╝╚══██╔══╝     ██╔══██╗██║   ██║╚══██╔══╝██╔════╝██║  ██║██╔══██╗██╔══██╗
+// █████╗     ██║        ██████╔╝██║   ██║   ██║   ██║     ███████║███████║██████╔╝
+// ██╔══╝     ██║        ██╔═══╝ ██║   ██║   ██║   ██║     ██╔══██║██╔══██║██╔══██╗
+// ██║        ██║███████╗██║     ╚██████╔╝   ██║   ╚██████╗██║  ██║██║  ██║██║  ██║
+// ╚═╝        ╚═╝╚══════╝╚═╝      ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+//
+// <<key_code.c>>
+
+#include "keys.h"
+#include "internal/utils/key_code.h"
+
+
+u32	kc_legacy_to_kitty(const u32 kc) {
+	switch (kc) {
+		case KB_KEY_LEGACY_F1:
+			return KB_KEY_F1;
+		case KB_KEY_LEGACY_F2:
+			return KB_KEY_F2;
+		case KB_KEY_LEGACY_F3:
+			return KB_KEY_F3;
+		case KB_KEY_LEGACY_F4:
+			return KB_KEY_F4;
+		case KB_KEY_LEGACY_F5:
+			return KB_KEY_F5;
+		case KB_KEY_LEGACY_F6:
+			return KB_KEY_F6;
+		case KB_KEY_LEGACY_F7:
+			return KB_KEY_F7;
+		case KB_KEY_LEGACY_F8:
+			return KB_KEY_F8;
+		case KB_KEY_LEGACY_F9:
+			return KB_KEY_F9;
+		case KB_KEY_LEGACY_F10:
+			return KB_KEY_F10;
+		case KB_KEY_LEGACY_F11:
+			return KB_KEY_F11;
+		case KB_KEY_LEGACY_F12:
+			return KB_KEY_F12;
+		case KB_KEY_LEGACY_F13:
+			return KB_KEY_F13;
+		case KB_KEY_LEGACY_F14:
+			return KB_KEY_F14;
+		case KB_KEY_LEGACY_F15:
+			return KB_KEY_F15;
+		case KB_KEY_LEGACY_F16:
+			return KB_KEY_F16;
+		case KB_KEY_LEGACY_F17:
+			return KB_KEY_F17;
+		case KB_KEY_LEGACY_F18:
+			return KB_KEY_F18;
+		case KB_KEY_LEGACY_F19:
+			return KB_KEY_F19;
+		case KB_KEY_LEGACY_F20:
+			return KB_KEY_F20;
+		case KB_KEY_LEGACY_F21:
+			return KB_KEY_F21;
+		case KB_KEY_LEGACY_F22:
+			return KB_KEY_F22;
+		case KB_KEY_LEGACY_F23:
+			return KB_KEY_F23;
+		case KB_KEY_LEGACY_F24:
+			return KB_KEY_F24;
+		case KB_KEY_LEGACY_F25:
+			return KB_KEY_F25;
+		case KB_KEY_LEGACY_F26:
+			return KB_KEY_F26;
+		case KB_KEY_LEGACY_F27:
+			return KB_KEY_F27;
+		case KB_KEY_LEGACY_F28:
+			return KB_KEY_F28;
+		case KB_KEY_LEGACY_F29:
+			return KB_KEY_F29;
+		case KB_KEY_LEGACY_F30:
+			return KB_KEY_F30;
+		case KB_KEY_LEGACY_F31:
+			return KB_KEY_F31;
+		case KB_KEY_LEGACY_F32:
+			return KB_KEY_F32;
+		case KB_KEY_LEGACY_F33:
+			return KB_KEY_F33;
+		case KB_KEY_LEGACY_F34:
+			return KB_KEY_F34;
+		case KB_KEY_LEGACY_F35:
+			return KB_KEY_F35;
+		case KB_KEY_LEGACY_UP:
+			return KB_KEY_UP;
+		case KB_KEY_LEGACY_DOWN:
+			return KB_KEY_DOWN;
+		case KB_KEY_LEGACY_LEFT:
+			return KB_KEY_LEFT;
+		case KB_KEY_LEGACY_RIGHT:
+			return KB_KEY_RIGHT;
+		case KB_KEY_LEGACY_INSERT:
+			return KB_KEY_INSERT;
+		case KB_KEY_LEGACY_HOME:
+			return KB_KEY_HOME;
+		case KB_KEY_LEGACY_PAGE_UP:
+			return KB_KEY_PAGE_UP;
+		case KB_KEY_LEGACY_DELETE:
+			return KB_KEY_DELETE;
+		case KB_KEY_LEGACY_END:
+			return KB_KEY_END;
+		case KB_KEY_LEGACY_PAGE_DOWN:
+			return KB_KEY_PAGE_DOWN;
+	}
+	return kc;
+}
+
+u32	kc_kitty_to_legacy(const u32 kc) {
+	switch (kc) {
+		case KB_KEY_F1:
+			return KB_KEY_LEGACY_F1;
+		case KB_KEY_F2:
+			return KB_KEY_LEGACY_F2;
+		case KB_KEY_F3:
+			return KB_KEY_LEGACY_F3;
+		case KB_KEY_F4:
+			return KB_KEY_LEGACY_F4;
+		case KB_KEY_F5:
+			return KB_KEY_LEGACY_F5;
+		case KB_KEY_F6:
+			return KB_KEY_LEGACY_F6;
+		case KB_KEY_F7:
+			return KB_KEY_LEGACY_F7;
+		case KB_KEY_F8:
+			return KB_KEY_LEGACY_F8;
+		case KB_KEY_F9:
+			return KB_KEY_LEGACY_F9;
+		case KB_KEY_F10:
+			return KB_KEY_LEGACY_F10;
+		case KB_KEY_F11:
+			return KB_KEY_LEGACY_F11;
+		case KB_KEY_F12:
+			return KB_KEY_LEGACY_F12;
+		case KB_KEY_F13:
+			return KB_KEY_LEGACY_F13;
+		case KB_KEY_F14:
+			return KB_KEY_LEGACY_F14;
+		case KB_KEY_F15:
+			return KB_KEY_LEGACY_F15;
+		case KB_KEY_F16:
+			return KB_KEY_LEGACY_F16;
+		case KB_KEY_F17:
+			return KB_KEY_LEGACY_F17;
+		case KB_KEY_F18:
+			return KB_KEY_LEGACY_F18;
+		case KB_KEY_F19:
+			return KB_KEY_LEGACY_F19;
+		case KB_KEY_F20:
+			return KB_KEY_LEGACY_F20;
+		case KB_KEY_F21:
+			return KB_KEY_LEGACY_F21;
+		case KB_KEY_F22:
+			return KB_KEY_LEGACY_F22;
+		case KB_KEY_F23:
+			return KB_KEY_LEGACY_F23;
+		case KB_KEY_F24:
+			return KB_KEY_LEGACY_F24;
+		case KB_KEY_F25:
+			return KB_KEY_LEGACY_F25;
+		case KB_KEY_F26:
+			return KB_KEY_LEGACY_F26;
+		case KB_KEY_F27:
+			return KB_KEY_LEGACY_F27;
+		case KB_KEY_F28:
+			return KB_KEY_LEGACY_F28;
+		case KB_KEY_F29:
+			return KB_KEY_LEGACY_F29;
+		case KB_KEY_F30:
+			return KB_KEY_LEGACY_F30;
+		case KB_KEY_F31:
+			return KB_KEY_LEGACY_F31;
+		case KB_KEY_F32:
+			return KB_KEY_LEGACY_F32;
+		case KB_KEY_F33:
+			return KB_KEY_LEGACY_F33;
+		case KB_KEY_F34:
+			return KB_KEY_LEGACY_F34;
+		case KB_KEY_F35:
+			return KB_KEY_LEGACY_F35;
+		case KB_KEY_UP:
+			return KB_KEY_LEGACY_UP;
+		case KB_KEY_DOWN:
+			return KB_KEY_LEGACY_DOWN;
+		case KB_KEY_LEFT:
+			return KB_KEY_LEGACY_LEFT;
+		case KB_KEY_RIGHT:
+			return KB_KEY_LEGACY_RIGHT;
+		case KB_KEY_INSERT:
+			return KB_KEY_LEGACY_INSERT;
+		case KB_KEY_HOME:
+			return KB_KEY_LEGACY_HOME;
+		case KB_KEY_PAGE_UP:
+			return KB_KEY_LEGACY_PAGE_UP;
+		case KB_KEY_DELETE:
+			return KB_KEY_LEGACY_DELETE;
+		case KB_KEY_END:
+			return KB_KEY_LEGACY_END;
+		case KB_KEY_PAGE_DOWN:
+			return KB_KEY_LEGACY_PAGE_DOWN;
+	}
+	return kc;
+}
