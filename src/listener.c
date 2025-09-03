@@ -227,7 +227,7 @@ static inline kbinput_key	*_listen_legacy(const kbinput_listener_id id) {
 		} else
 			rv = strlen(listeners[id].buf);
 		i = 0;
-		if (_legacy_parse_escape(listeners[id].buf, &key, &buf_len))
+		if (_legacy_parse_escape(listeners[id].buf, &key, &i))
 			goto _listen_legacy_match_key;
 		if (listeners[id].buf[0] == '\x1b') switch (listeners[id].buf[1]) {
 			case '\0':
@@ -368,13 +368,24 @@ static inline size_t	_seqlen(const char *s) {
 }
 
 static inline u8	_legacy_parse_escape(const char *seq, kbinput_key *key, size_t *seq_len) {
-	u16	escape_name;
+	size_t	i;
+	u16		escape_name;
 
 	escape_name = parse_legacy_key_seq(seq);
-	if (escape_name == LEGACY_SEQ_NO_MATCH)
+	if (escape_name == LEGACY_SEQ_NO_MATCH) {
+		if (strncmp(seq, "\x1b[", 2) == 0) {
+			for (i = 2; seq[i]; i++)
+				if (seq[i] >= '\x40')
+					break ;
+			*seq_len = i - 1;
+		}
 		return 0;
-	*seq_len = strlen(ti_getstr(escape_name));
+	}
+	*seq_len = strlen(ti_getstr(escape_name)) - 1;
 	switch (escape_name) {
+		case ti_kf0:
+			*key = kbinput_key(KB_KEY_LEGACY_F0, 0, KB_EVENT_PRESS, NULL);
+			break ;
 		case ti_kf1:
 			*key = kbinput_key(KB_KEY_LEGACY_F1, 0, KB_EVENT_PRESS, NULL);
 			break ;
@@ -594,6 +605,12 @@ static inline u8	_legacy_parse_escape(const char *seq, kbinput_key *key, size_t 
 		case ti_kpp:
 			*key = kbinput_key(KB_KEY_LEGACY_PAGE_DOWN, 0, KB_EVENT_PRESS, NULL);
 			break ;
+		case ti_kri:
+			*key = kbinput_key(KB_KEY_LEGACY_UP, KB_MOD_SHIFT, KB_EVENT_PRESS, NULL);
+			break ;
+		case ti_kind:
+			*key = kbinput_key(KB_KEY_LEGACY_DOWN, KB_MOD_SHIFT, KB_EVENT_PRESS, NULL);
+			break ;
 		case ti_kLFT:
 			*key = kbinput_key(KB_KEY_LEGACY_LEFT, KB_MOD_SHIFT, KB_EVENT_PRESS, NULL);
 			break ;
@@ -778,6 +795,8 @@ static inline u8	_check_legacy_compatability(const kbinput_key *key) {
 	if (key->modifiers & ~(_LEGACY_MOD_MASK)) {
 		if (!(key->modifiers & ~(KB_MOD_SHIFT | _LEGACY_MOD_MASK))) switch (key->code) {
 			case '\t':
+			case KB_KEY_LEGACY_UP:
+			case KB_KEY_LEGACY_DOWN:
 			case KB_KEY_LEGACY_LEFT:
 			case KB_KEY_LEGACY_RIGHT:
 			case KB_KEY_LEGACY_INSERT:
