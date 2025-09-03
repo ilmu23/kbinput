@@ -16,6 +16,7 @@
 #include "internal/_kbinput.h"
 #include "internal/utils/string.h"
 #include "internal/utils/vector.h"
+#include "internal/utils/key_code.h"
 
 typedef struct __key_group {
 	vector	keys;
@@ -134,9 +135,10 @@ void	kbinput_delete_listener(const kbinput_listener_id id) {
 	}
 }
 
-i8	kbinput_add_listener(const kbinput_listener_id id, const kbinput_key key) {
+i8	kbinput_add_listener(const kbinput_listener_id id, kbinput_key key) {
 	if (id < 0 || id >= MAX_LISTENERS)
 		return KB_INVALID_LISTENER_ID;
+	key.code = (input_protocol == KB_INPUT_PROTOCOL_KITTY) ? kc_legacy_to_kitty(key.code) : kc_kitty_to_legacy(key.code);
 	if (input_protocol == KB_INPUT_PROTOCOL_LEGACY && !_check_legacy_compatability(&key))
 		return KB_OPTION_NOT_SUPPORTED;
 	return (_insert_key(listeners[id].keys, &key));
