@@ -49,6 +49,7 @@ $(NAME): $(OBJDIR) $(OBJS)
 	@printf "\e[38;5;119;1mKBINPUT >\e[m \e[1mDone!\e[m\n"
 
 install: $(NAME)
+	@mkdir -p $(INSTALL_PATH)/lib
 	@cp $(NAME) $(INSTALL_PATH)/lib/
 
 install-headers:
