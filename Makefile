@@ -31,7 +31,6 @@ UTILDIR	=	utils
 FILES	=	init.c \
 			legacy_seqs.c \
 			listener.c \
-			$(UTILDIR)/key_code.c \
 			$(UTILDIR)/string.c \
 			$(UTILDIR)/terminfo.c \
 			$(UTILDIR)/utf8.c \

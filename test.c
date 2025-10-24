@@ -32,46 +32,76 @@ void	*press(void *arg) {
 	key = arg;
 	fprintf(stdout, "event: ");
 	_print_mods(key);
-	switch (key->code) {
+	if (kbinput_get_input_protocol() == KB_INPUT_PROTOCOL_KITTY) switch (key->code) {
 		case KB_KEY_UP:
-		case KB_KEY_LEGACY_UP:
 			fprintf(stdout, "<UP> pressed");
 			break ;
 		case KB_KEY_DOWN:
-		case KB_KEY_LEGACY_DOWN:
 			fprintf(stdout, "<DOWN> pressed");
 			break ;
 		case KB_KEY_LEFT:
-		case KB_KEY_LEGACY_LEFT:
 			fprintf(stdout, "<LEFT> pressed");
 			break ;
 		case KB_KEY_RIGHT:
-		case KB_KEY_LEGACY_RIGHT:
 			fprintf(stdout, "<RIGHT> pressed");
 			break ;
 		case KB_KEY_INSERT:
-		case KB_KEY_LEGACY_INSERT:
 			fprintf(stdout, "<INS> pressed");
 			break ;
 		case KB_KEY_HOME:
-		case KB_KEY_LEGACY_HOME:
 			fprintf(stdout, "<HME> pressed");
 			break ;
 		case KB_KEY_PAGE_UP:
-		case KB_KEY_LEGACY_PAGE_UP:
 			fprintf(stdout, "<PGU> pressed");
 			break ;
 		case KB_KEY_DELETE:
-		case KB_KEY_LEGACY_DELETE:
 			fprintf(stdout, "<DEL> pressed");
 			break ;
 		case KB_KEY_END:
-		case KB_KEY_LEGACY_END:
 			fprintf(stdout, "<END> pressed");
 			break ;
 		case KB_KEY_PAGE_DOWN:
+			fprintf(stdout, "<PGD> pressed");
+			break ;
+		case KB_KEY_F1:
+			fprintf(stdout, "<F-1> pressed");
+			break ;
+		default:
+			if (isprint(key->code))
+				fprintf(stdout, "%c pressed", toupper(key->code));
+	} else switch (key->code) {
+		case KB_KEY_LEGACY_UP:
+			fprintf(stdout, "<UP> pressed");
+			break ;
+		case KB_KEY_LEGACY_DOWN:
+			fprintf(stdout, "<DOWN> pressed");
+			break ;
+		case KB_KEY_LEGACY_LEFT:
+			fprintf(stdout, "<LEFT> pressed");
+			break ;
+		case KB_KEY_LEGACY_RIGHT:
+			fprintf(stdout, "<RIGHT> pressed");
+			break ;
+		case KB_KEY_LEGACY_INSERT:
+			fprintf(stdout, "<INS> pressed");
+			break ;
+		case KB_KEY_LEGACY_HOME:
+			fprintf(stdout, "<HME> pressed");
+			break ;
+		case KB_KEY_LEGACY_PAGE_UP:
+			fprintf(stdout, "<PGU> pressed");
+			break ;
+		case KB_KEY_LEGACY_DELETE:
+			fprintf(stdout, "<DEL> pressed");
+			break ;
+		case KB_KEY_LEGACY_END:
+			fprintf(stdout, "<END> pressed");
+			break ;
 		case KB_KEY_LEGACY_PAGE_DOWN:
 			fprintf(stdout, "<PGD> pressed");
+			break ;
+		case KB_KEY_LEGACY_F1:
+			fprintf(stdout, "<F-1> pressed");
 			break ;
 		default:
 			if (isprint(key->code))
@@ -140,38 +170,51 @@ static inline void	_init_listeners(const kbinput_listener_id id) {
 	for (c = 'a'; c <= 'z'; c++) {
 		for (i = 0; i < EVENT_COUNT; i++) {
 			for (j = 0; j < MOD_COUNT; j++) {
-				assert(kbinput_add_listener(id, kbinput_key(c, mods[j], events[i].et, events[i].fn)) > 0 || ign);
+				assert(kbinput_add_listener(id, kbinput_key_ign_lck(c, mods[j], events[i].et, events[i].fn)) > 0 || ign);
 			}
 		}
 	}
 	for (c = '0'; c <= '9'; c++) {
 		for (i = 0; i < EVENT_COUNT; i++) {
 			for (j = 0; j < MOD_COUNT; j++) {
-				assert(kbinput_add_listener(id, kbinput_key(c, mods[j], events[i].et, events[i].fn)) > 0 || ign);
+				assert(kbinput_add_listener(id, kbinput_key_ign_lck(c, mods[j], events[i].et, events[i].fn)) > 0 || ign);
 			}
 		}
 	}
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_UP, 0, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_DOWN, 0, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_LEFT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_RIGHT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_INSERT, 0, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_HOME, 0, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_PAGE_UP, 0, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_DELETE, 0, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_END, 0, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_PAGE_DOWN, 0, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_UP, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_DOWN, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_LEFT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_RIGHT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_INSERT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_HOME, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_PAGE_UP, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_DELETE, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_END, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key(KB_KEY_PAGE_DOWN, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
-	assert(kbinput_add_listener(id, kbinput_key('c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)) > 0 || ign);
+	if (kbinput_get_input_protocol() == KB_INPUT_PROTOCOL_KITTY) {
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_UP, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_DOWN, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEFT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_RIGHT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_INSERT, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_HOME, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_PAGE_UP, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_DELETE, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_END, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_PAGE_DOWN, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_UP, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_DOWN, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEFT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_RIGHT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_INSERT, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_HOME, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_PAGE_UP, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_DELETE, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_END, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_PAGE_DOWN, KB_MOD_SHIFT, KB_EVENT_PRESS, press)) > 0 || ign);
+	} else {
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_UP, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_DOWN, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_LEFT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_RIGHT, 0, KB_EVENT_PRESS, press)) > 0  || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_INSERT, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_HOME, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_PAGE_UP, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_DELETE, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_END, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+		assert(kbinput_add_listener(id, kbinput_key_ign_lck(KB_KEY_LEGACY_PAGE_DOWN, 0, KB_EVENT_PRESS, press)) > 0 || ign);
+	}
+	assert(kbinput_add_listener(id, kbinput_key_ign_lck('c', KB_MOD_CTRL, KB_EVENT_PRESS, quit)) > 0 || ign);
 }
 
 i32	main(void) {

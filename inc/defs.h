@@ -69,3 +69,11 @@ typedef struct __key {
 			.event_type = event,\
 			.fn = (kbinput_fn)function\
 		})
+
+#define kbinput_key_ign_lck(key_code, mods, event, function)	(\
+		(kbinput_key){\
+			.code = key_code,\
+			.modifiers = mods | KB_MOD_IGN_LCK,\
+			.event_type = event,\
+			.fn = (kbinput_fn)function\
+		})

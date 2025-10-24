@@ -16,7 +16,6 @@
 #include "internal/_kbinput.h"
 #include "internal/utils/string.h"
 #include "internal/utils/vector.h"
-#include "internal/utils/key_code.h"
 
 typedef struct __key_group {
 	vector	keys;
@@ -138,7 +137,6 @@ void	kbinput_delete_listener(const kbinput_listener_id id) {
 i8	kbinput_add_listener(const kbinput_listener_id id, kbinput_key key) {
 	if (id < 0 || id >= MAX_LISTENERS)
 		return KB_INVALID_LISTENER_ID;
-	key.code = (input_protocol == KB_INPUT_PROTOCOL_KITTY) ? kc_legacy_to_kitty(key.code) : kc_kitty_to_legacy(key.code);
 	if (input_protocol == KB_INPUT_PROTOCOL_LEGACY && !_check_legacy_compatability(&key))
 		return KB_OPTION_NOT_SUPPORTED;
 	return (_insert_key(listeners[id].keys, &key));
@@ -275,7 +273,11 @@ static inline kbinput_key	*_listen_legacy(const kbinput_listener_id id) {
 					key.modifiers |= KB_MOD_CTRL;
 					key.code = listeners[id].buf[i] + '`';
 			} else
-				key.code = listeners[id].buf[i];
+				if (isupper(listeners[id].buf[i])) {
+					key.modifiers |= KB_MOD_SHIFT;
+					key.code = tolower(listeners[id].buf[i]);
+				} else
+					key.code = listeners[id].buf[i];
 		} else {
 			key.code = _legacy_parse_codepoint(&listeners[id].buf[i], rv - i);
 			if (key.code == UINT32_MAX)
@@ -796,19 +798,70 @@ static inline u8	_check_legacy_compatability(const kbinput_key *key) {
 		return 0;
 	if (key->modifiers & ~(_LEGACY_MOD_MASK)) {
 		if (!(key->modifiers & ~(KB_MOD_SHIFT | _LEGACY_MOD_MASK))) switch (key->code) {
-			case '\t':
-			case KB_KEY_LEGACY_UP:
-			case KB_KEY_LEGACY_DOWN:
-			case KB_KEY_LEGACY_LEFT:
-			case KB_KEY_LEGACY_RIGHT:
-			case KB_KEY_LEGACY_INSERT:
-			case KB_KEY_LEGACY_HOME:
-			case KB_KEY_LEGACY_PAGE_UP:
-			case KB_KEY_LEGACY_DELETE:
-			case KB_KEY_LEGACY_END:
-			case KB_KEY_LEGACY_PAGE_DOWN:
-				break ;
-			default:
+			case KB_KEY_LEGACY_F0:
+			case KB_KEY_LEGACY_F1:
+			case KB_KEY_LEGACY_F2:
+			case KB_KEY_LEGACY_F3:
+			case KB_KEY_LEGACY_F4:
+			case KB_KEY_LEGACY_F5:
+			case KB_KEY_LEGACY_F6:
+			case KB_KEY_LEGACY_F7:
+			case KB_KEY_LEGACY_F8:
+			case KB_KEY_LEGACY_F9:
+			case KB_KEY_LEGACY_F10:
+			case KB_KEY_LEGACY_F11:
+			case KB_KEY_LEGACY_F12:
+			case KB_KEY_LEGACY_F13:
+			case KB_KEY_LEGACY_F14:
+			case KB_KEY_LEGACY_F15:
+			case KB_KEY_LEGACY_F16:
+			case KB_KEY_LEGACY_F17:
+			case KB_KEY_LEGACY_F18:
+			case KB_KEY_LEGACY_F19:
+			case KB_KEY_LEGACY_F20:
+			case KB_KEY_LEGACY_F21:
+			case KB_KEY_LEGACY_F22:
+			case KB_KEY_LEGACY_F23:
+			case KB_KEY_LEGACY_F24:
+			case KB_KEY_LEGACY_F25:
+			case KB_KEY_LEGACY_F26:
+			case KB_KEY_LEGACY_F27:
+			case KB_KEY_LEGACY_F28:
+			case KB_KEY_LEGACY_F29:
+			case KB_KEY_LEGACY_F30:
+			case KB_KEY_LEGACY_F31:
+			case KB_KEY_LEGACY_F32:
+			case KB_KEY_LEGACY_F33:
+			case KB_KEY_LEGACY_F34:
+			case KB_KEY_LEGACY_F35:
+			case KB_KEY_LEGACY_F36:
+			case KB_KEY_LEGACY_F37:
+			case KB_KEY_LEGACY_F38:
+			case KB_KEY_LEGACY_F39:
+			case KB_KEY_LEGACY_F40:
+			case KB_KEY_LEGACY_F41:
+			case KB_KEY_LEGACY_F42:
+			case KB_KEY_LEGACY_F43:
+			case KB_KEY_LEGACY_F44:
+			case KB_KEY_LEGACY_F45:
+			case KB_KEY_LEGACY_F46:
+			case KB_KEY_LEGACY_F47:
+			case KB_KEY_LEGACY_F48:
+			case KB_KEY_LEGACY_F49:
+			case KB_KEY_LEGACY_F50:
+			case KB_KEY_LEGACY_F51:
+			case KB_KEY_LEGACY_F52:
+			case KB_KEY_LEGACY_F53:
+			case KB_KEY_LEGACY_F54:
+			case KB_KEY_LEGACY_F55:
+			case KB_KEY_LEGACY_F56:
+			case KB_KEY_LEGACY_F57:
+			case KB_KEY_LEGACY_F58:
+			case KB_KEY_LEGACY_F59:
+			case KB_KEY_LEGACY_F60:
+			case KB_KEY_LEGACY_F61:
+			case KB_KEY_LEGACY_F62:
+			case KB_KEY_LEGACY_F63:
 				return 0;
 		} else
 			return 0;
