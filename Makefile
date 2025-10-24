@@ -22,6 +22,8 @@ CFLAGS			=	$(cflags.common) $(cflags.$(BUILD)) $(cflags.extra)
 LD		=	ld
 LDFLAGS	=	-shared
 
+INSTALL_PATH	=	/usr
+
 SRCDIR	=	src
 OBJDIR	=	obj
 INCDIR	=	inc
@@ -45,6 +47,13 @@ $(NAME): $(OBJDIR) $(OBJS)
 	@printf "\e[38;5;119;1mKBINPUT >\e[m Linking %s\n" $@
 	@$(LD) $(LDFLAGS) $(OBJS) -o $@
 	@printf "\e[38;5;119;1mKBINPUT >\e[m \e[1mDone!\e[m\n"
+
+install: $(NAME)
+	@cp $(NAME) $(INSTALL_PATH)/lib/
+
+install-headers:
+	@mkdir -p $(INSTALL_PATH)/include/kbinput
+	@cp $(INCDIR)/*.h $(INSTALL_PATH)/include/kbinput/
 
 $(OBJDIR):
 	@printf "\e[38;5;119;1mKBINPUT >\e[m Creating objdirs\n"
